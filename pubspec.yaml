@@ -1,0 +1,138 @@
+name: careme24
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^8.1.5
+  mask_text_input_formatter: ^2.9.0
+  country_code_picker: ^3.0.0
+  flutter_svg: ^2.0.10+1
+  intl: ^0.19.0
+  permission_handler: ^11.3.1
+  pin_code_fields: ^8.0.1
+  cached_network_image: ^3.4.1
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
+  dio: ^5.7.0
+  shared_preferences: ^2.3.2
+  freezed_annotation: ^2.4.4
+  flutter_slidable: ^3.1.1
+  url_launcher: ^6.3.1
+  image_picker: ^1.1.2
+  modal_bottom_sheet: ^3.0.0
+  flutter_masked_text2: ^0.9.1
+  file_picker: ^8.1.2
+  open_file: ^3.5.9
+  webview_flutter: ^4.10.0
+  elegant_notification: ^2.3.0
+  flutter_dotenv: ^5.2.1
+  flutter_contacts: ^1.1.9+2
+  sqflite: ^2.4.0
+  connectivity_plus: ^6.1.0
+  path: ^1.9.0
+  local_auth: ^2.3.0
+  sensors_plus: ^6.1.0
+  camera: ^0.11.0+2
+  email_validator: ^3.0.0
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.2
+  alarm: ^4.0.10
+  flutter_rating_bar: ^4.0.1
+  firebase_messaging: ^15.2.3
+  firebase_core: ^3.12.0
+  path_provider: ^2.1.5
+  web_socket_channel: ^3.0.1
+  volume_controller: ^2.0.0
+  get_it: ^8.0.3
+  audioplayers: ^5.2.1
+  flutter_background_service: ^5.1.0
+  country_picker: ^2.0.20
+  flutter_inappwebview: ^6.1.5
+  internet_connection_checker_plus: ^2.7.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_native_splash: ^2.4.0
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/splash_logo.png
+  android: true
+  ios: true
+  fullscreen: true
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/env.txt
+    - assets/
+    - assets/home_images/
+    - assets/images/
+    - assets/logo.svg
+    - assets/medicine_help_icon.svg
+    - assets/ru_flag.svg
+    - assets/icons/
+    - assets/icons/air_pollution/
+    - assets/icons/temperature/
+    - assets/icons/pressure/
+    - assets/icons/wind/
+    - assets/rec/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/MontserratMedium.ttf
+          weight: 500
+        - asset: assets/fonts/MontserratSemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/MontserratBold.ttf
+          weight: 700
+        - asset: assets/fonts/MontserratRomanBold.ttf
+          weight: 700
+        - asset: assets/fonts/MontserratRomanSemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/MontserratRegular.ttf
+          weight: 400
+        - asset: assets/fonts/MontserratRomanMedium.ttf
+          weight: 500
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package

@@ -1,0 +1,31 @@
+<svg width="121" height="121" viewBox="0 0 121 121" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <filter id="filter0_dd_2250_16871" x="0.5" y="0" width="120" height="121" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+            <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+            <feOffset dy="4"/>
+            <feGaussianBlur stdDeviation="3.5"/>
+            <feComposite in2="hardAlpha" operator="out"/>
+            <feColorMatrix type="matrix" values="0 0 0 0 0.627431 0 0 0 0 0.685336 0 0 0 0 0.8125 0 0 0 0.29 0"/>
+            <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_2250_16871"/>
+            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+            <feOffset dx="1" dy="1"/>
+            <feGaussianBlur stdDeviation="2.5"/>
+            <feComposite in2="hardAlpha" operator="out"/>
+            <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.739833 0 0 0 0 0.0708333 0 0 0 0.4 0"/>
+            <feBlend mode="normal" in2="effect1_dropShadow_2250_16871" result="effect2_dropShadow_2250_16871"/>
+            <feBlend mode="normal" in="SourceGraphic" in2="effect2_dropShadow_2250_16871" result="shape"/>
+        </filter>
+        <linearGradient id="paint0_linear_2250_16871" x1="113.5" y1="110" x2="30.981" y2="4" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#02BEBE"/>
+            <stop offset="0.0001" stop-color="#4902BE"/>
+            <stop offset="0.999749" stop-color="#BA12D6"/>
+        </linearGradient>
+    </defs>
+<g filter="url(#filter0_dd_2250_16871)">
+<circle cx="60.5" cy="57" r="53" fill="url(#paint0_linear_2250_16871)"/>
+</g>
+<path d="M68.8934 44H42.0498C40.6146 44 39.4512 45.1634 39.4512 46.5986V68.1875C39.4512 69.6227 40.6146 70.7861 42.0498 70.7861H68.8934C70.3286 70.7861 71.4921 69.6227 71.4921 68.1875V46.5986C71.4921 45.1634 70.3286 44 68.8934 44Z" fill="white"/>
+<path d="M80.3284 67.9145L73.5312 63.7316V50.9424L80.3284 46.7595C80.5029 46.6525 80.7028 46.594 80.9075 46.5901C81.1122 46.5861 81.3142 46.6368 81.4927 46.737C81.6712 46.8372 81.8197 46.9832 81.923 47.16C82.0262 47.3367 82.0804 47.5378 82.08 47.7425V66.9158C82.0833 67.1218 82.0311 67.3249 81.929 67.5039C81.8269 67.6829 81.6786 67.8311 81.4996 67.9332C81.3206 68.0352 81.1175 68.0873 80.9114 68.084C80.7054 68.0807 80.5041 68.0222 80.3284 67.9145Z" fill="white"/>
+
+</svg>

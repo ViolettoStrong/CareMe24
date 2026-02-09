@@ -1,0 +1,2 @@
+C:/Users/misha/Downloads/osnownoye_prilozhenya_source_code/crme24/android/app/.cxx/RelWithDebInfo/5r3d1b1j/x86/CMakeFiles/edit_cache.dir
+C:/Users/misha/Downloads/osnownoye_prilozhenya_source_code/crme24/android/app/.cxx/RelWithDebInfo/5r3d1b1j/x86/CMakeFiles/rebuild_cache.dir
