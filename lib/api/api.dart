@@ -1298,6 +1298,7 @@ class Api {
     }
   }
 
+  /// GET /api/requests/favours/{institution_id} → { "status": "success", "favours": [{ institution_id, name, duration, price, type, id }] }
   static Future<List<Map<String, dynamic>>> getRequestFavours(
       String institutionId) async {
     try {
@@ -1305,11 +1306,11 @@ class Api {
           await httpManager.get('/api/requests/favours/$institutionId');
       log('getRequestFavours result: $result');
 
-      if (result['status'] == 'success' && result['favours'] != null) {
-        return List<Map<String, dynamic>>.from(result['favours']);
-      } else {
-        return [];
+      if (result['favours'] != null && result['favours'] is List) {
+        return List<Map<String, dynamic>>.from(
+            (result['favours'] as List).map((e) => Map<String, dynamic>.from(e as Map)));
       }
+      return [];
     } catch (e) {
       log('Error getRequestFavours: $e');
       return [];
@@ -1376,6 +1377,17 @@ class Api {
       return List<Map<String, dynamic>>.from(result);
     } catch (e) {
       log('Pressure load error getRequests112Archive: $e');
+      return [];
+    }
+  }
+
+  /// Archive of requests (institutions: med, pol, mch). Returns all; filter by type on client.
+  static Future<List<Map<String, dynamic>>> getRequestsArchive() async {
+    try {
+      final result = await httpManager.get('/api/requests/archive');
+      return List<Map<String, dynamic>>.from(result);
+    } catch (e) {
+      log('getRequestsArchive error: $e');
       return [];
     }
   }

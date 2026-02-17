@@ -23,7 +23,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PoliceCallPage extends StatefulWidget {
-  const PoliceCallPage({super.key});
+  const PoliceCallPage({super.key, this.favours, this.selectedContact});
+
+  final List<Map<String, dynamic>>? favours;
+  final MedcardModel? selectedContact;
 
   @override
   State<PoliceCallPage> createState() => _PoliceCallPageState();
@@ -66,6 +69,7 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
   @override
   void initState() {
     super.initState();
+    _selectedContact = widget.selectedContact;
     getMyCalls();
   }
 
@@ -107,10 +111,7 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
               child: IconButton(
                   icon:
                       const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                  onPressed: () => {
-                        Navigator.pop(context),
-                        Navigator.pop(context),
-                      }),
+                  onPressed: () => Navigator.pop(context)),
             ),
             centerTitle: true,
             title: AppbarTitle(text: "Вызов полиции"),
@@ -125,130 +126,11 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
                   child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                            child: InkWell(
-                                borderRadius: BorderRadius.circular(10),
-                                onTap: () async {
-                                  final selectedContact =
-                                      await showDialog<MedcardModel>(
-                                    barrierDismissible: false,
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return const ContactSelectDialogMed();
-                                    },
-                                  );
-
-                                  setState(() {
-                                    _selectedContact = selectedContact;
-                                  });
-                                  if (selectedContact != null) {
-                                    setState(() {
-                                      isCalling = false;
-                                    });
-                                    dynamic response = await Api.fetchCallsData(
-                                        'pol', selectedContact.id);
-                                    if (response == null || response.isEmpty) {
-                                      setState(() {
-                                        isCalling = false;
-                                      });
-                                    } else {
-                                      setState(() {
-                                        res = response;
-                                        isCalling = true;
-                                      });
-                                    }
-                                  } else {
-                                    dynamic cardId =
-                                        await MedcardRepository.fetchMyCard();
-                                    if (cardId != null) {
-                                      dynamic response =
-                                          await Api.fetchCallsData(
-                                              'pol', cardId.id);
-                                      if (response == null ||
-                                          response.isEmpty) {
-                                        setState(() {
-                                          isCalling = false;
-                                        });
-                                      } else {
-                                        setState(() {
-                                          isCalling = true;
-                                          res = response;
-                                        });
-                                      }
-                                    }
-                                  }
-                                },
-                                child: Stack(
-                                  children: [
-                                    ForWhom(
-                                      name: _selectedContact
-                                              ?.personalInfo.full_name ??
-                                          'Мне',
-                                    ),
-                                    if (isCalling)
-                                      Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.redAccent,
-                                                borderRadius:
-                                                    const BorderRadius.only(
-                                                  topRight: Radius.circular(8),
-                                                  bottomLeft:
-                                                      Radius.circular(8),
-                                                ),
-                                              ),
-                                              child: Material(
-                                                color: Colors.transparent,
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: InkWell(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) =>
-                                                            MainCallPage(
-                                                          text: 'Вызов полиции',
-                                                          requestId: res.values
-                                                              .first['id'],
-                                                          show: isNotifContact,
-                                                          type: 'pol',
-                                                          latestCalls: res,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Row(
-                                                    children: const [
-                                                      Icon(Icons.phone_in_talk,
-                                                          size: 14,
-                                                          color: Colors.white),
-                                                      SizedBox(width: 4),
-                                                      Text(
-                                                        'Вызов активен',
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ))),
-                                  ],
-                                ))),
+                        ForWhom(
+                            name: widget.selectedContact
+                                    ?.personalInfo.full_name ??
+                                'Мне',
+                          ),
                         Column(
                           children: [
                             Container(
@@ -312,37 +194,172 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
                           ),
                         ),
                         Expanded(
-                            child: ListView.separated(
-                          itemCount: reasonText.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return ReasonPolice(
-                              onTap: () {
-                                isCalling
-                                    ? ElegantNotification.error(
-                                        description:
-                                            const Text('Заявка уже отправлена'),
-                                      ).show(context)
-                                    : Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                PoliceCallButton(
-                                                  text: reasonText[index],
-                                                  selectedContact:
-                                                      _selectedContact,
-                                                )));
-                              },
-                              text: reasonText[index],
-                              disable: reasonDisable[index],
-                              backgroundColor: Colors.white,
-                            );
-                          },
-                          separatorBuilder: (BuildContext context, int index) =>
-                              const Divider(indent: 0, height: 1),
-                        ))
+                            child: _buildReasonList(),
+                        )
                       ]),
                 ),
               )
             ])));
+  }
+
+  Widget _buildReasonList() {
+    final favoursList = widget.favours;
+    if (favoursList != null) {
+      if (favoursList.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(
+              'Данное учреждение в настоящее время недоступно',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ),
+        );
+      }
+      final showPaidMode = VersionConstant.free;
+      final sortedFavours = List<Map<String, dynamic>>.from(favoursList)
+        ..sort((a, b) {
+          final aFree = (a['type'] as String? ?? 'free') == 'free';
+          final bFree = (b['type'] as String? ?? 'free') == 'free';
+          final aActive = showPaidMode ? !aFree : aFree;
+          final bActive = showPaidMode ? !bFree : bFree;
+          if (aActive == bActive) return 0;
+          return aActive ? -1 : 1;
+        });
+      return ListView.separated(
+        padding: const EdgeInsets.only(bottom: 24),
+        itemCount: sortedFavours.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _buildFavourCard(sortedFavours[index]),
+      );
+    }
+    return ListView.separated(
+      itemCount: reasonText.length,
+      itemBuilder: (BuildContext context, int index) {
+        return ReasonPolice(
+          onTap: () {
+            isCalling
+                ? ElegantNotification.error(
+                    description: const Text('Заявка уже отправлена'),
+                  ).show(context)
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => PoliceCallButton(
+                              text: reasonText[index],
+                              selectedContact: widget.selectedContact,
+                            )));
+          },
+          text: reasonText[index],
+          disable: reasonDisable[index],
+          backgroundColor: Colors.white,
+        );
+      },
+      separatorBuilder: (BuildContext context, int index) =>
+          const Divider(indent: 0, height: 1),
+    );
+  }
+
+  Widget _buildFavourCard(Map<String, dynamic> f) {
+    final name = f['name'] as String? ?? '';
+    final duration = (f['duration'] as num?)?.toInt() ?? 0;
+    final price = (f['price'] as num?)?.toInt() ?? 0;
+    final type = f['type'] as String? ?? 'free';
+    final isFree = type == 'free';
+    final showPaidMode = VersionConstant.free;
+    final isActive = showPaidMode ? !isFree : isFree;
+    final bgColor = !isActive
+        ? Colors.grey.shade200
+        : (showPaidMode ? const Color(0xFFFFE4EC) : Colors.white);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (!isActive) return;
+          if (isCalling) {
+            ElegantNotification.error(
+              description: const Text('Заявка уже отправлена'),
+            ).show(context);
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PoliceCallButton(
+                  text: name,
+                  selectedContact: widget.selectedContact,
+                ),
+              ),
+            );
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Opacity(
+          opacity: isActive ? 1 : 0.7,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isActive ? const Color(0xFF1A1A1A) : Colors.grey.shade700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule_outlined, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text('$duration мин', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                          const SizedBox(width: 16),
+                          Icon(Icons.payments_outlined, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(price == 0 ? '0 ₽' : '$price ₽', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isFree ? const Color(0xFFE8F5E9) : const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isFree ? 'Бесплатно' : 'Платно',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isFree ? const Color(0xFF2E7D32) : const Color(0xFF1565C0),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

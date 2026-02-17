@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:careme24/pages/calls/medic_call_page.dart';
-import 'package:careme24/pages/calls/police_call_page.dart';
-import 'package:careme24/pages/calls/rescue_call_page.dart';
+import 'package:careme24/pages/calls/medical_call_button.dart';
+import 'package:careme24/pages/calls/police_call_button.dart';
+import 'package:careme24/pages/calls/rescue_call_button.dart';
 import 'package:careme24/utils/image_constant.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -19,18 +19,19 @@ class _HelpScreenTouchState extends State<HelpScreenTouch> {
   void initState() {
     super.initState();
 
-    /// 4 վայրկյան հետո ավտոմատ բացում է համապատասխան էջը
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => widget.type == 'med'
-              ? MedicCallPage()
-              : widget.type == 'pol'
-                  ? PoliceCallPage()
-                  : RescueCallPage(),
+          builder: (_) => Scaffold(
+            body: widget.type == 'med'
+                ? MedicalCallButton(text: '', selectedContact: null)
+                : widget.type == 'pol'
+                    ? PoliceCallButton(text: '', selectedContact: null)
+                    : RescueCallButton(text: '', selectedContact: null),
+          ),
         ),
       );
     });

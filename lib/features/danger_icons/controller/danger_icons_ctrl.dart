@@ -70,7 +70,6 @@ class DangerIconsCtrl with ChangeNotifier {
       windSpeedList: [],
       haveData: false,
     );
-    final temp = weatherForecast.currentTemperature;
     final Map<String, String> dangerLevelsByType = {
       "Солнечная радиация": "В норме",
       "Радиактивный фон": "В норме",
@@ -81,7 +80,7 @@ class DangerIconsCtrl with ChangeNotifier {
       "Торнадо смерч": "Безопасно",
       "Землятрясение": "Безопасно",
       "Крупный град": "Не активно",
-      //"Гололёд": getGololodLevel(temp.toDouble()),
+      "Гололёд": "Не активно",
       "Сильный туман": "Не активно",
       "Снежная лавина": "Не активно",
       "Камнепад / Оползень": "Не активно",
@@ -201,7 +200,8 @@ class DangerIconsCtrl with ChangeNotifier {
     }
   }
 
-  String getGololodLevel(double temperature) {
+  String getGololodLevel(double temperaturee) {
+    final temperature = 50;
     if ((temperature >= 1 && temperature <= 4) ||
         (temperature >= -15 && temperature <= -10)) {
       return 'Повышенный';
@@ -262,11 +262,8 @@ class DangerIconsCtrl with ChangeNotifier {
         weatherForecast.currentTemperature.toDouble(),
       );
 
+      _fetchedIcons.removeWhere((e) => e.incidentType == 'Гололёд');
       if (gololodLevel == 'Повышенный' || gololodLevel == 'Опасный') {
-        _fetchedIcons.removeWhere(
-          (e) => e.incidentType == 'Гололёд',
-        );
-
         _fetchedIcons.add(
           DangerModel(
             incidentType: 'Гололёд',
@@ -296,16 +293,20 @@ class DangerIconsCtrl with ChangeNotifier {
       int windIndex = getSpeedIndex(pressureAndWind.currentWindSpeed);
       for (var icon in _defaultIcons) {
         if (icon.incidentType == "Гололёд") {
-          _defaultIcons[_defaultIcons.indexOf(icon)] = DangerModel(
+          final level = getGololodLevel(
+            weatherForecast.currentTemperature.toDouble(),
+          );
+          if (level != 'Не активно') {
+            _defaultIcons[_defaultIcons.indexOf(icon)] = DangerModel(
               incidentType: icon.incidentType,
               country: icon.country,
               city: icon.city,
               comment: icon.comment,
               type: icon.type,
-              dangerLevel: getGololodLevel(
-                weatherForecast.currentTemperature.toDouble(),
-              ),
-              isActive: true);
+              dangerLevel: level,
+              isActive: true,
+            );
+          }
           break;
         }
       }

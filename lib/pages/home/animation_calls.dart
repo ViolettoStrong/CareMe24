@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AutoExpandBox extends StatefulWidget {
-  const AutoExpandBox({super.key});
+  const AutoExpandBox({super.key, this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   State<AutoExpandBox> createState() => _AutoExpandBoxState();
@@ -40,14 +42,16 @@ class _AutoExpandBoxState extends State<AutoExpandBox>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Align(
-        alignment: Alignment.centerRight,
-        child: AnimatedBuilder(
-          animation: _widthAnimation,
-          builder: (context, child) {
-            return Container(
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Align(
+          alignment: Alignment.centerRight,
+          child: AnimatedBuilder(
+            animation: _widthAnimation,
+            builder: (context, child) {
+              return Container(
                 width: _widthAnimation.value,
                 height: 35,
                 decoration: BoxDecoration(
@@ -75,7 +79,8 @@ class _AutoExpandBoxState extends State<AutoExpandBox>
                         : SizedBox(),
                   ],
                 ));
-          },
+            },
+          ),
         ),
       ),
     );

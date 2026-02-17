@@ -744,6 +744,21 @@ class _HomeScreenState extends State<MainPage> {
                                         HoldDetector(
                                             type: 'pol',
                                             onHoldComplete: () {
+                                              if (isCallingPol) {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => MainCallPage(
+                                                      text: 'Вызов полиции',
+                                                      requestId: resPol.values.first['id'],
+                                                      show: isNotifContact,
+                                                      type: 'pol',
+                                                      latestCalls: resPol,
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
                                               if (isGeolocationEnable) {
                                                 if (authorization == false) {
                                                   Navigator.push(
@@ -902,6 +917,21 @@ class _HomeScreenState extends State<MainPage> {
                                         HoldDetector(
                                             type: 'mch',
                                             onHoldComplete: () {
+                                              if (isCallingMch) {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => MainCallPage(
+                                                      text: 'Вызов МЧС',
+                                                      requestId: resMch.values.first['id'],
+                                                      show: isNotifContact,
+                                                      type: 'mch',
+                                                      latestCalls: resMch,
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
                                               if (isGeolocationEnable) {
                                                 if (authorization == false) {
                                                   Navigator.push(
@@ -1063,6 +1093,21 @@ class _HomeScreenState extends State<MainPage> {
                                     HoldDetector(
                                         type: 'med',
                                         onHoldComplete: () {
+                                          if (isCallingMed) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => MainCallPage(
+                                                  text: 'Вызов скорой',
+                                                  requestId: resMed.values.first['id'],
+                                                  show: isNotifContact,
+                                                  type: 'med',
+                                                  latestCalls: resMed,
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
                                           if (isGeolocationEnable) {
                                             if (authorization == false) {
                                               Navigator.push(

@@ -72,7 +72,7 @@ class _DoctorsPageState extends State<DoctorsPage> {
                   children: [
                     _buildTab(HistoryTab.doctors, 'Врачи'),
                     _buildTab(HistoryTab.institutions, 'Институты'),
-                    _buildTab(HistoryTab.services, '  Частные услуги  '),
+                    _buildTab(HistoryTab.services, 'Частные\nуслуги'),
                   ],
                 ),
               ),
@@ -124,7 +124,7 @@ class _DoctorsPageState extends State<DoctorsPage> {
     }
   }
 
-  Widget _buildSubTab(SubTab tab, String title) {
+  Widget _buildSubTab(SubTab tab, String title) { 
     final isActive = selectedSubTab == tab;
 
     return Expanded(
@@ -170,11 +170,15 @@ class _DoctorsPageState extends State<DoctorsPage> {
             color: isActive ? ColorConstant.blue60001 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : Colors.grey,
+          child: SizedBox(
+            width: double.infinity,
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isActive ? Colors.white : Colors.grey,
+              ),
             ),
           ),
         ),
@@ -449,10 +453,16 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
   const AppointmentListBodyInstitutions(
       {super.key, required this.type, this.page});
 
+  /// Институты: для МЕД/ПОЛ/МЧС — /api/requests/archive (все сразу), фильтр по type на клиенте; «Я очевидец» (112) — без изменений.
   @override
   Widget build(BuildContext context) {
+    final isArchive = type == 'med' || type == 'pol' || type == 'mch';
+    final future = type == '112'
+        ? Api.getRequests112Archive()
+        : (isArchive ? Api.getRequestsArchive() : Future.value(<dynamic>[]));
+
     return FutureBuilder<List<dynamic>>(
-      future: type == '112' ? Api.getRequests112Archive() : Future.value([]),
+      future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -462,22 +472,38 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
           return Center(child: Text('Ошибка: ${snapshot.error}'));
         }
 
-        final data = snapshot.data ?? [];
+        var data = snapshot.data ?? [];
+        if (isArchive && data.isNotEmpty) {
+          data = data.where((e) => (e as Map<String, dynamic>)['type'] == type).toList();
+        }
         if (data.isEmpty) {
-          return const Center(child: Text('Нет записей'));
+          return Center(
+            child: Text(
+              isArchive ? 'Нет истории' : 'Нет записей',
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
         }
 
         data.sort((a, b) {
           try {
             if (type == 'pol' || type == 'mch' || type == '112') {
-              final dateA = DateTime.parse(a['created_at']).toLocal();
-              final dateB = DateTime.parse(b['created_at']).toLocal();
-              return dateB.compareTo(dateA);
-            } else {
-              final dateA = DateTime.parse(a['appointment_time']).toLocal();
-              final dateB = DateTime.parse(b['appointment_time']).toLocal();
+              final dateA = DateTime.parse(a['created_at'] as String).toLocal();
+              final dateB = DateTime.parse(b['created_at'] as String).toLocal();
               return dateB.compareTo(dateA);
             }
+            if (type == 'med' && isArchive) {
+              final rawA = a['created_at'] ?? a['creation_date_user'];
+              final rawB = b['created_at'] ?? b['creation_date_user'];
+              if (rawA != null && rawB != null) {
+                final dateA = DateTime.parse(rawA as String).toLocal();
+                final dateB = DateTime.parse(rawB as String).toLocal();
+                return dateB.compareTo(dateA);
+              }
+            }
+            final dateA = DateTime.parse(a['appointment_time'] as String).toLocal();
+            final dateB = DateTime.parse(b['appointment_time'] as String).toLocal();
+            return dateB.compareTo(dateA);
           } catch (_) {
             return 0;
           }
@@ -487,24 +513,49 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           itemCount: data.length,
           itemBuilder: (context, index) {
-            final item = data[index];
-            final service = item['service'];
-            final doctorName = type == '112'
-                ? item['detail'] ?? 'Без имени'
-                : service?['name'] ?? 'Без имени';
-            final photoUrl = service?['photo'];
-            final address = type == '112'
-                ? item['address'] ?? 'Адрес не указан'
-                : service?['work_place'] ?? 'Адрес не указан';
+            final item = data[index] as Map<String, dynamic>;
+            String doctorName;
+            String? photoUrl;
+            String address;
+
+            if (type == '112') {
+              doctorName = item['detail'] as String? ?? 'Без имени';
+              photoUrl = item['service']?['photo'] as String?;
+              address = item['address'] as String? ?? 'Адрес не указан';
+            } else if (isArchive) {
+              final institution = item['institution'] as Map<String, dynamic>?;
+              final card = item['card'] as Map<String, dynamic>?;
+              doctorName = institution?['name'] as String? ??
+                  item['detail'] as String? ??
+                  card?['personal_info']?['full_name'] as String? ??
+                  'Без имени';
+              photoUrl = card?['personal_info']?['avatar'] as String?;
+              address = institution?['address'] as String? ?? 'Адрес не указан';
+            } else {
+              final service = item['service'] as Map<String, dynamic>?;
+              doctorName = service?['name'] as String? ?? 'Без имени';
+              photoUrl = service?['photo'] as String?;
+              address = service?['work_place'] as String? ?? 'Адрес не указан';
+            }
 
             String dateInfo = '';
-
             if (type == 'pol' || type == 'mch' || type == '112') {
-              final createdAt = DateTime.parse(item['created_at']).toLocal();
-              dateInfo = DateFormat('dd.MM.yyyy HH:mm').format(createdAt);
+              final raw = item['created_at'] as String?;
+              if (raw != null) {
+                final createdAt = DateTime.parse(raw).toLocal();
+                dateInfo = DateFormat('dd.MM.yyyy HH:mm').format(createdAt);
+              }
+            } else if (isArchive) {
+              final raw = item['created_at'] ?? item['creation_date_user'];
+              if (raw != null) {
+                try {
+                  final dt = DateTime.parse(raw as String).toLocal();
+                  dateInfo = DateFormat('dd.MM.yyyy HH:mm').format(dt);
+                } catch (_) {}
+              }
             } else {
               try {
-                final dt = DateTime.parse(item['appointment_time']).toLocal();
+                final dt = DateTime.parse(item['appointment_time'] as String).toLocal();
                 dateInfo = '${DateFormat('dd.MM.yyyy').format(dt)} '
                     '${DateFormat('HH:mm').format(dt)}';
               } catch (_) {}
@@ -513,7 +564,7 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 6),
               child: ListTile(
-                leading: photoUrl != null
+                leading: photoUrl != null && photoUrl.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
@@ -529,7 +580,7 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
-                  type == 'pol' || type == 'mch'
+                  type == 'pol' || type == 'mch' || isArchive
                       ? 'Дата регистрации: $dateInfo\nАдрес: $address'
                       : 'Дата и время: $dateInfo\nАдрес: $address',
                 ),

@@ -7,8 +7,10 @@ import 'package:careme24/models/medcard/medcard_model.dart';
 import 'package:careme24/models/request_status_model.dart';
 import 'package:careme24/pages/calls/dialog_select_contact_med.dart';
 import 'package:careme24/pages/calls/main_call_page.dart';
+import 'package:careme24/pages/calls/medic_call_page.dart';
 import 'package:careme24/pages/calls/select_instituts.dart';
 import 'package:careme24/pages/home/main_page.dart';
+import 'package:careme24/router/app_router.dart';
 import 'package:careme24/repositories/medcard_repository.dart';
 import 'package:careme24/service/pref_service.dart';
 import 'package:careme24/theme/app_style.dart';
@@ -48,6 +50,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
   InstitutionModel? institutionModel;
   String distance = '';
   String duration = '';
+  List<Map<String, dynamic>>? favours;
 
   @override
   void initState() {
@@ -79,7 +82,13 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
         distance = res['distance'].toString();
         duration = res['duration'].toString();
       });
+      _loadFavours(institutionModel!.id);
     }
+  }
+
+  Future<void> _loadFavours(String institutionId) async {
+    final list = await Api.getRequestFavours(institutionId);
+    if (mounted) setState(() => favours = list);
   }
 
   Future<void> _loadDefaultInstitution(String type) async {
@@ -117,6 +126,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
       distance = prefs.getString('${prefix}_distance') ?? '--';
       duration = prefs.getString('${prefix}_duration') ?? '--';
     });
+    if (institutionModel != null) _loadFavours(institutionModel!.id);
   }
 
   void setValue() async {
@@ -141,8 +151,26 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
               width: getHorizontalSize(11),
               svgPath: ImageConstant.imgArrowleft,
               margin: getMargin(left: 32, top: 12, bottom: 20),
-              onTap: () {
-                Navigator.pop(context);
+              onTap: () async {
+                final stop = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Остановить процесс?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Нет'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Да'),
+                      ),
+                    ],
+                  ),
+                );
+                if (stop == true && context.mounted) {
+                  Navigator.pushReplacementNamed(context, AppRouter.appContainer);
+                }
               }),
           centerTitle: true,
           title: AppbarTitle(text: "Вызвать скорую"),
@@ -159,26 +187,26 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () async {
-                          /*final selectedContact = await showDialog<MedcardModel>(
-                          barrierDismissible: false,
-                          context: context,
-                          builder: (BuildContext context) {
-                            return const ContactSelectDialogMed();
-                          },
-                        );
-
-
+                          final selectedContact =
+                              await showDialog<MedcardModel>(
+                            barrierDismissible: false,
+                            context: context,
+                            builder: (BuildContext context) {
+                              return const ContactSelectDialogMed();
+                            },
+                          );
                           setState(() {
                             _selectedContact = selectedContact;
                           });
-                          if (_selectedContact != null) {
-                            MedcardRepository.fetchMyCard().then( (value) {
-                              AppBloc.requestCubit.medCardId = value.id;
+                          if (selectedContact != null) {
+                            AppBloc.requestCubit.medCardId = selectedContact.id;
+                          } else {
+                            MedcardRepository.fetchMyCard().then((value) {
+                              if (value != null) {
+                                AppBloc.requestCubit.medCardId = value.id;
+                              }
                             });
                           }
-                          else{
-                            
-                          }*/
                         },
                         child: ForWhom(
                           name:
@@ -214,27 +242,43 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                     ],
                   ),
                 ])),
-        Container(
-          margin: const EdgeInsets.only(top: 14, bottom: 24),
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
-            color: Color.fromRGBO(178, 218, 255, 100),
-          ),
-          width: MediaQuery.of(context).size.width - 40,
-          height: 80,
-          child: Padding(
-            padding: getPadding(left: 20, right: 20, top: 20, bottom: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    overflow: TextOverflow.ellipsis,
-                    widget.text,
-                    style: AppStyle.txtMontserratSemiBold19,
-                  ),
+        GestureDetector(
+          onTap: () {
+            if (institutionModel != null && (favours == null || favours!.isEmpty)) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MedicCallPage(
+                  favours: favours,
+                  selectedContact: _selectedContact,
                 ),
-              ],
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(top: 14, bottom: 24),
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              color: Color.fromRGBO(178, 218, 255, 100),
+            ),
+            width: MediaQuery.of(context).size.width - 40,
+            height: 80,
+            child: Padding(
+              padding: getPadding(left: 20, right: 20, top: 20, bottom: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      overflow: TextOverflow.ellipsis,
+                      institutionModel != null && (favours == null || favours!.isEmpty)
+                          ? 'Учреждение не работает'
+                          : (widget.text.isEmpty ? 'Выбрать причину' : widget.text),
+                      style: AppStyle.txtMontserratSemiBold19,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -267,6 +311,18 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                   child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () async {
+                        if (institutionModel != null && (favours == null || favours!.isEmpty)) {
+                          ElegantNotification.error(
+                            description: const Text('Учреждение не работает'),
+                          ).show(context);
+                          return;
+                        }
+                        if (favours != null && favours!.isNotEmpty && widget.text.isEmpty) {
+                          ElegantNotification.error(
+                            description: const Text('Выберите причину'),
+                          ).show(context);
+                          return;
+                        }
                         setState(() {
                           on = !on;
                         });
@@ -356,15 +412,24 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                           }
                         }
                       },
-                      child: SvgPicture.asset(on
-                          ? 'assets/images/m_on.svg'
-                          : 'assets/images/m_off.svg'))),
-              const Text(
+                      child: Opacity(
+                        opacity: (institutionModel != null && (favours == null || favours!.isEmpty)) ||
+                                (favours != null && favours!.isNotEmpty && widget.text.isEmpty)
+                            ? 0.5
+                            : 1,
+                        child: SvgPicture.asset(on
+                            ? 'assets/images/m_on.svg'
+                            : 'assets/images/m_off.svg'),
+                      ))),
+              Text(
                 'Вызвать скорую',
                 style: TextStyle(
-                  color: Color.fromRGBO(219, 19, 91, 1),
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
+                  color: (institutionModel != null && (favours == null || favours!.isEmpty)) ||
+                          (favours != null && favours!.isNotEmpty && widget.text.isEmpty)
+                      ? Colors.grey
+                      : const Color.fromRGBO(219, 19, 91, 1),
                 ),
               ),
             ],
@@ -390,6 +455,9 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                         distance = result['distance'] ?? '';
                         duration = result['duration'] ?? '';
                       });
+                      if (institutionModel != null) {
+                        _loadFavours(institutionModel!.id);
+                      }
                     });
                   },
                   child: Container(
@@ -421,6 +489,9 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                           distance = result['distance'] ?? '';
                           duration = result['duration'] ?? '';
                         });
+                        if (institutionModel != null) {
+                          _loadFavours(institutionModel!.id);
+                        }
                       });
                     },
                     child: Container(
