@@ -102,6 +102,7 @@ class Api {
   static const String reviewes_service = '/api/reviews/service/';
   static const String reviews = '/api/reviews/';
   static const String average_rating = '/api/reviews/';
+  static const String reviewsInstitutions = '/api/reviews/institutions';
 
   // medicines
   static const String medicines = '/api/medicines/medicine';
@@ -1481,6 +1482,11 @@ class Api {
     }
   }
 
+  static const String favouriteInstitutions =
+      '/api/requests/favourite_institutions';
+  static const String favouriteInstitution =
+      '/api/requests/favourite_institution';
+
   static Future<List<InstitutionModel>> getInstitutions(
       Map<String, dynamic> params) async {
     List<InstitutionModel> institutionList = [];
@@ -1496,6 +1502,96 @@ class Api {
     } catch (e) {
       log('Pressure load error getInstitutions: $e');
       return [];
+    }
+  }
+
+  /// GET /api/requests/favourite_institutions
+  static Future<dynamic> getFavouriteInstitutions() async {
+    try {
+      final result = await httpManager.get(favouriteInstitutions);
+      return result;
+    } catch (e) {
+      log('getFavouriteInstitutions error: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/requests/favourite_institution — body: application/x-www-form-urlencoded institution_id
+  static Future<dynamic> postFavouriteInstitution(String institutionId) async {
+    try {
+      final result = await httpManager.postForm(
+        favouriteInstitution,
+        data: {'institution_id': institutionId},
+      );
+      return result;
+    } catch (e) {
+      log('postFavouriteInstitution error: $e');
+      rethrow;
+    }
+  }
+
+  /// DELETE /api/requests/favourite_institution — body: application/x-www-form-urlencoded institution_id
+  static Future<dynamic> deleteFavouriteInstitution(String institutionId) async {
+    try {
+      final result = await httpManager.deleteForm(
+        favouriteInstitution,
+        data: {'institution_id': institutionId},
+      );
+      return result;
+    } catch (e) {
+      log('deleteFavouriteInstitution error: $e');
+      rethrow;
+    }
+  }
+
+  /// POST /api/reviews/institutions — Create Institution Review
+  /// Request body: application/x-www-form-urlencoded (text, rating, institution_id)
+  static Future<dynamic> postInstitutionReview(
+      Map<String, dynamic> data) async {
+    try {
+      final result = await httpManager.postForm(reviewsInstitutions, data: data);
+      return result;
+    } catch (e) {
+      log('postInstitutionReview error: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/reviews/institutions/{institution_id} — Get Institution Reviews
+  static Future<List<Review>> getInstitutionReviews(String institutionId) async {
+    try {
+      final result = await httpManager.get('$reviewsInstitutions/$institutionId');
+      if (result is List) {
+        return result.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } catch (e) {
+      log('getInstitutionReviews error: $e');
+      return [];
+    }
+  }
+
+  /// DELETE /api/reviews/institutions/{review_id} — Delete Institution Review
+  static Future<dynamic> deleteInstitutionReview(String reviewId) async {
+    try {
+      final result = await httpManager.delete('$reviewsInstitutions/$reviewId');
+      return result;
+    } catch (e) {
+      log('deleteInstitutionReview error: $e');
+      rethrow;
+    }
+  }
+
+  /// GET /api/reviews/institutions/{institution_id}/average_rating
+  static Future<Map<String, dynamic>> getInstitutionAverageRating(
+      String institutionId) async {
+    try {
+      final result = await httpManager
+          .get('$reviewsInstitutions/$institutionId/average_rating');
+      return result is Map<String, dynamic> ? result : {};
+    } catch (e) {
+      log('getInstitutionAverageRating error: $e');
+      return {};
     }
   }
 
@@ -1883,11 +1979,17 @@ class Api {
       if (response is List) {
         late final List filtered;
         if (type == 'any') {
-          filtered = response.where((e) => e['card_id'] == cardId).toList();
+          filtered = response
+              .where((e) =>
+                  e['card_id'] == cardId && e['status'] != 'done')
+              .toList();
           return filtered;
         } else {
           filtered = response
-              .where((e) => e['type'] == type && e['card_id'] == cardId)
+              .where((e) =>
+                  e['type'] == type &&
+                  e['card_id'] == cardId &&
+                  e['status'] != 'done')
               .toList();
         }
 

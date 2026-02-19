@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:careme24/api/api.dart';
 import 'package:careme24/constants.dart';
+import 'package:careme24/models/institution_model.dart';
 import 'package:careme24/models/medcard/medcard_model.dart';
 import 'package:careme24/pages/calls/dialog_select_contact_med.dart';
 import 'package:careme24/pages/calls/main_call_page.dart';
@@ -23,10 +24,20 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PoliceCallPage extends StatefulWidget {
-  const PoliceCallPage({super.key, this.favours, this.selectedContact});
+  const PoliceCallPage({
+    super.key,
+    this.favours,
+    this.selectedContact,
+    this.selectedInstitution,
+    this.institutionDistance,
+    this.institutionDuration,
+  });
 
   final List<Map<String, dynamic>>? favours;
   final MedcardModel? selectedContact;
+  final InstitutionModel? selectedInstitution;
+  final String? institutionDistance;
+  final String? institutionDuration;
 
   @override
   State<PoliceCallPage> createState() => _PoliceCallPageState();
@@ -37,6 +48,8 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
   MedcardModel? _selectedContact;
   bool isCalling = false;
   dynamic res;
+  InstitutionModel? _institutionFromApi;
+  List<Map<String, dynamic>>? _favoursFromApi;
 
   final List<String> reasonText = <String>[
     "3.13. Мелкое хулиганство",
@@ -71,6 +84,28 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
     super.initState();
     _selectedContact = widget.selectedContact;
     getMyCalls();
+    _loadFavouriteInstitution('pol');
+  }
+
+  Future<void> _loadFavouriteInstitution(String type) async {
+    try {
+      final result = await Api.getFavouriteInstitutions();
+      if (result is! List || result.isEmpty) return;
+      for (final item in result) {
+        final map = item is Map<String, dynamic> ? item : null;
+        if (map == null) continue;
+        if ((map['type']?.toString() ?? '') == type) {
+          final institution = InstitutionModel.fromJson(map);
+          final list = await Api.getRequestFavours(institution.id);
+          if (!mounted) return;
+          setState(() {
+            _institutionFromApi = institution.copyWith(favourite: true);
+            _favoursFromApi = list;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
   }
 
   void setValue() async {
@@ -203,7 +238,7 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
   }
 
   Widget _buildReasonList() {
-    final favoursList = widget.favours;
+    final favoursList = _favoursFromApi ?? widget.favours;
     if (favoursList != null) {
       if (favoursList.isEmpty) {
         return Center(
@@ -249,6 +284,10 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
                         builder: (context) => PoliceCallButton(
                               text: reasonText[index],
                               selectedContact: widget.selectedContact,
+                              initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                              initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                              initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                              initialFavours: _favoursFromApi ?? widget.favours,
                             )));
           },
           text: reasonText[index],
@@ -288,6 +327,10 @@ class _PoliceCallPageState extends State<PoliceCallPage> {
                 builder: (context) => PoliceCallButton(
                   text: name,
                   selectedContact: widget.selectedContact,
+                  initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                  initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                  initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                  initialFavours: _favoursFromApi ?? widget.favours,
                 ),
               ),
             );

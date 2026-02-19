@@ -200,12 +200,12 @@ class DangerIconsCtrl with ChangeNotifier {
     }
   }
 
-  String getGololodLevel(double temperaturee) {
-    final temperature = 50;
-    if ((temperature >= 1 && temperature <= 4) ||
-        (temperature >= -15 && temperature <= -10)) {
+  String getGololodLevel(double temperatur) {
+    
+    if ((temperatur >= 1 && temperatur <= 4) ||
+        (temperatur >= -15 && temperatur <= -10)) {
       return 'Повышенный';
-    } else if (temperature < 1 && temperature > -10) {
+    } else if (temperatur < 1 && temperatur > -10) {
       return 'Опасный';
     } else {
       return 'Не активно';
@@ -296,17 +296,15 @@ class DangerIconsCtrl with ChangeNotifier {
           final level = getGololodLevel(
             weatherForecast.currentTemperature.toDouble(),
           );
-          if (level != 'Не активно') {
-            _defaultIcons[_defaultIcons.indexOf(icon)] = DangerModel(
-              incidentType: icon.incidentType,
-              country: icon.country,
-              city: icon.city,
-              comment: icon.comment,
-              type: icon.type,
-              dangerLevel: level,
-              isActive: true,
-            );
-          }
+          _defaultIcons[_defaultIcons.indexOf(icon)] = DangerModel(
+            incidentType: icon.incidentType,
+            country: icon.country,
+            city: icon.city,
+            comment: icon.comment,
+            type: icon.type,
+            dangerLevel: level,
+            isActive: level != 'Не активно',
+          );
           break;
         }
       }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:careme24/api/api.dart';
 import 'package:careme24/constants.dart';
+import 'package:careme24/models/institution_model.dart';
 import 'package:careme24/models/medcard/medcard_model.dart';
 import 'package:careme24/pages/calls/dialog_select_contact_med.dart';
 import 'package:careme24/pages/calls/main_call_page.dart';
@@ -17,12 +18,23 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MedicCallPage extends StatefulWidget {
-  const MedicCallPage({super.key, this.favours, this.selectedContact});
+  const MedicCallPage({
+    super.key,
+    this.favours,
+    this.selectedContact,
+    this.selectedInstitution,
+    this.institutionDistance,
+    this.institutionDuration,
+  });
 
   /// Услуги из /api/requests/favours (если передан с call_button при выборе учреждения)
   final List<Map<String, dynamic>>? favours;
   /// Контакт, выбранный на call_button (для отображения «Для кого»)
   final MedcardModel? selectedContact;
+  /// Учреждение, выбранное на call_button (чтобы при выборе услуги не перезагружать из prefs/nearest)
+  final InstitutionModel? selectedInstitution;
+  final String? institutionDistance;
+  final String? institutionDuration;
 
   @override
   State<MedicCallPage> createState() => _MedicCallPageState();
@@ -62,13 +74,37 @@ final List<bool> reasonDisable = <bool>[
 
 class _MedicCallPageState extends State<MedicCallPage> {
   bool isNotifContact = false;
+  InstitutionModel? _institutionFromApi;
+  List<Map<String, dynamic>>? _favoursFromApi;
+
   @override
   void initState() {
     super.initState();
-    // Call_page показывает только то, что пришло с call_button — больше ничего.
     _selectedContact = widget.selectedContact;
     getMyCalls();
     setValue();
+    _loadFavouriteInstitution('med');
+  }
+
+  Future<void> _loadFavouriteInstitution(String type) async {
+    try {
+      final result = await Api.getFavouriteInstitutions();
+      if (result is! List || result.isEmpty) return;
+      for (final item in result) {
+        final map = item is Map<String, dynamic> ? item : null;
+        if (map == null) continue;
+        if ((map['type']?.toString() ?? '') == type) {
+          final institution = InstitutionModel.fromJson(map);
+          final list = await Api.getRequestFavours(institution.id);
+          if (!mounted) return;
+          setState(() {
+            _institutionFromApi = institution.copyWith(favourite: true);
+            _favoursFromApi = list;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
   }
 
   void setValue() async {
@@ -102,7 +138,7 @@ class _MedicCallPageState extends State<MedicCallPage> {
         resizeToAvoidBottomInset: false,
         appBar: CustomAppBar(
             height: getVerticalSize(48),
-            leadingWidth: 43,
+            leadingWidth: 43, 
             leading: Padding(
               padding:
                   const EdgeInsets.only(left: 8.0), // 👉 որքան աջ ես ուզում
@@ -212,7 +248,7 @@ class _MedicCallPageState extends State<MedicCallPage> {
   }
 
   Widget _buildReasonList() {
-    final favoursList = widget.favours;
+    final favoursList = _favoursFromApi ?? widget.favours;
     if (favoursList != null) {
       if (favoursList.isEmpty) {
         return Center(
@@ -267,6 +303,10 @@ class _MedicCallPageState extends State<MedicCallPage> {
                       builder: (context) => MedicalCallButton(
                         text: name,
                         selectedContact: widget.selectedContact,
+                        initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                        initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                        initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                        initialFavours: _favoursFromApi ?? widget.favours,
                       ),
                     ),
                   );
@@ -366,6 +406,10 @@ class _MedicCallPageState extends State<MedicCallPage> {
                         builder: (context) => MedicalCallButton(
                               text: reasonText[index],
                               selectedContact: widget.selectedContact,
+                              initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                              initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                              initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                              initialFavours: _favoursFromApi ?? widget.favours,
                             )));
           },
           text: reasonText[index],

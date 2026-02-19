@@ -1,6 +1,7 @@
 import 'package:careme24/api/api.dart';
 import 'package:careme24/pages/doctors/favorites_cubit.dart';
 import 'package:careme24/pages/doctors/favorites_state.dart';
+import 'package:careme24/pages/med/reviews_list_screen.dart';
 import 'package:careme24/pages/services_call/doctor_call_page_fav.dart';
 import 'package:careme24/pages/services_call/select_reason_screen.dart';
 import 'package:careme24/theme/app_style.dart';
@@ -538,6 +539,17 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
               address = service?['work_place'] as String? ?? 'Адрес не указан';
             }
 
+            final institution = (type == 'med' || type == 'pol' || type == 'mch')
+                ? (item['institution'] as Map<String, dynamic>?)
+                : null;
+            final institutionId = institution?['id']?.toString() ??
+                institution?['pk']?.toString();
+            final showRating = (type == 'med' || type == 'pol' || type == 'mch') &&
+                institutionId != null;
+            final averageRating = institution?['average_rating'] ??
+                institution?['average_raiting'];
+            final institutionName = institution?['name'] as String?;
+
             String dateInfo = '';
             if (type == 'pol' || type == 'mch' || type == '112') {
               final raw = item['created_at'] as String?;
@@ -579,6 +591,39 @@ class AppointmentListBodyInstitutions extends StatelessWidget {
                   type == 'med' ? 'Запись к $doctorName' : doctorName,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                trailing: showRating
+                    ? InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (context) => ReviewsScreen(
+                                is_institution: true,
+                                institutionId: institutionId,
+                                institutionName: institutionName,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 28),
+                            if (averageRating != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                '$averageRating',
+                                style: const TextStyle(
+                                  color: Colors.amber,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      )
+                    : null,
                 subtitle: Text(
                   type == 'pol' || type == 'mch' || isArchive
                       ? 'Дата регистрации: $dateInfo\nАдрес: $address'

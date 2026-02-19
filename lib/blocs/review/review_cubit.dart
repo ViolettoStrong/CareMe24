@@ -33,7 +33,6 @@ class ReviewCubit extends Cubit<ReviewState> {
   Future<void> getAverage(
     String id,
   ) async {
-    emit(ReviewLoading());
     try {
       final response = await ReviewRepository.getAverageRetingRepository(id);
 
@@ -57,6 +56,54 @@ class ReviewCubit extends Cubit<ReviewState> {
 
       if (reviews.isNotEmpty) {
         emit(ReviewLoaded(reviews));
+      } else {
+        emit(const ReviewFailure("Failed to submit review"));
+      }
+    } catch (e) {
+      emit(ReviewFailure("Error: ${e.toString()}"));
+    }
+  }
+
+  Future<void> getInstitutionReview(String institutionId) async {
+    emit(ReviewLoading());
+    try {
+      final List<Review> reviews =
+          await ReviewRepository.getInstitutionReviewsRepository(institutionId);
+      emit(ReviewLoaded(reviews));
+    } catch (e) {
+      emit(ReviewFailure("Error: ${e.toString()}"));
+    }
+  }
+
+  Future<void> getInstitutionAverage(String institutionId) async {
+    try {
+      final response =
+          await ReviewRepository.getInstitutionAverageRatingRepository(
+              institutionId);
+      if (response['average_rating'] != null && response.isNotEmpty) {
+        emit(ReviewSuccessAverage(response['average_rating']));
+      } else {
+        emit(const ReviewFailure("Failed to load average"));
+      }
+    } catch (e) {
+      emit(ReviewFailure("Error: ${e.toString()}"));
+    }
+  }
+
+  Future<void> submitInstitutionReview(
+      String text, int rating, String institutionId) async {
+    emit(ReviewLoading());
+    try {
+      final data = {
+        "text": text.trim(),
+        "rating": rating,
+        "institution_id": institutionId.trim(),
+      };
+      final response =
+          await ReviewRepository.postInstitutionReviewRepository(data);
+      if (response != null) {
+        emit(const ReviewSuccess("Review submitted successfully!"));
+        getInstitutionReview(institutionId);
       } else {
         emit(const ReviewFailure("Failed to submit review"));
       }

@@ -40,6 +40,22 @@ class InstitutionModel {
       maxPrice: json['max_price'] ?? 0.0,
     );
   }
+
+  InstitutionModel copyWith({bool? favourite}) {
+    return InstitutionModel(
+      id: id,
+      name: name,
+      commercial: commercial,
+      type: type,
+      address: address,
+      location: location,
+      favourite: favourite ?? this.favourite,
+      reviews: reviews,
+      averageRating: averageRating,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+    );
+  }
 }
 
 class Location {

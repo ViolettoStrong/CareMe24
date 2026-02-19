@@ -18,4 +18,23 @@ class ReviewRepository {
       String id) async {
     return await Api.getAverageRating(id);
   }
+
+  static Future<List<Review>> getInstitutionReviewsRepository(
+      String institutionId) async {
+    return await Api.getInstitutionReviews(institutionId);
+  }
+
+  static Future<dynamic> postInstitutionReviewRepository(
+      Map<String, dynamic> data) async {
+    return await Api.postInstitutionReview(data);
+  }
+
+  static Future<dynamic> deleteInstitutionReviewRepository(String reviewId) async {
+    return await Api.deleteInstitutionReview(reviewId);
+  }
+
+  static Future<Map<String, dynamic>> getInstitutionAverageRatingRepository(
+      String institutionId) async {
+    return await Api.getInstitutionAverageRating(institutionId);
+  }
 }

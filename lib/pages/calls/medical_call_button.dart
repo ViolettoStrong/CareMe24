@@ -9,10 +9,8 @@ import 'package:careme24/pages/calls/dialog_select_contact_med.dart';
 import 'package:careme24/pages/calls/main_call_page.dart';
 import 'package:careme24/pages/calls/medic_call_page.dart';
 import 'package:careme24/pages/calls/select_instituts.dart';
-import 'package:careme24/pages/home/main_page.dart';
 import 'package:careme24/router/app_router.dart';
 import 'package:careme24/repositories/medcard_repository.dart';
-import 'package:careme24/service/pref_service.dart';
 import 'package:careme24/theme/app_style.dart';
 import 'package:careme24/theme/color_constant.dart';
 import 'package:careme24/utils/image_constant.dart';
@@ -34,10 +32,18 @@ class MedicalCallButton extends StatefulWidget {
     super.key,
     required this.text,
     required this.selectedContact,
+    this.initialInstitution,
+    this.initialDistance,
+    this.initialDuration,
+    this.initialFavours,
   });
 
   final String text;
   final MedcardModel? selectedContact;
+  final InstitutionModel? initialInstitution;
+  final String? initialDistance;
+  final String? initialDuration;
+  final List<Map<String, dynamic>>? initialFavours;
 
   @override
   State<MedicalCallButton> createState() => _MedicalCallButtonState();
@@ -51,13 +57,27 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
   String distance = '';
   String duration = '';
   List<Map<String, dynamic>>? favours;
+  /// Selected usluga/reason; cleared when institution changes.
+  String _displayReason = '';
 
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       setValue();
     });
-    _loadDefaultInstitution('med');
+    if (widget.initialInstitution != null) {
+      institutionModel = widget.initialInstitution;
+      distance = widget.initialDistance ?? '--';
+      duration = widget.initialDuration ?? '--';
+      favours = widget.initialFavours;
+      _displayReason = widget.text;
+      if (widget.initialFavours == null && institutionModel != null) {
+        _loadFavours(institutionModel!.id);
+      }
+    } else {
+      _displayReason = widget.text;
+      _loadDefaultInstitution('med');
+    }
     widget.selectedContact != null
         ? _selectedContact = widget.selectedContact
         : _selectedContact = null;
@@ -77,12 +97,32 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
     final res = await Api.loadNearestInstitution(
         lat: userLat, lon: userLon, institutionType: 'med');
     if (res != null) {
-      setState(() {
-        institutionModel = InstitutionModel.fromJson(res['institution']);
-        distance = res['distance'].toString();
-        duration = res['duration'].toString();
-      });
+      var institution = InstitutionModel.fromJson(res['institution']);
+      institution = await _applyFavouriteFromApi(institution);
+      if (mounted) {
+        setState(() {
+          institutionModel = institution;
+          distance = res['distance'].toString();
+          duration = res['duration'].toString();
+        });
+      }
       _loadFavours(institutionModel!.id);
+    }
+  }
+
+  Future<InstitutionModel> _applyFavouriteFromApi(
+      InstitutionModel institution) async {
+    try {
+      final result = await Api.getFavouriteInstitutions();
+      if (result is! List || result.isEmpty) return institution;
+      final favouriteIds = result
+          .map((e) => (e is Map ? e['id'] : e)?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      return institution.copyWith(
+          favourite: favouriteIds.contains(institution.id));
+    } catch (_) {
+      return institution;
     }
   }
 
@@ -92,41 +132,29 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
   }
 
   Future<void> _loadDefaultInstitution(String type) async {
-    final prefs = await SharedPreferences.getInstance();
-    final prefix = 'default_institution_$type';
-
-    final id = prefs.getString('${prefix}_id');
-    if (id == null) {
-      await _loadNearestInstitution();
-      return;
-    }
-
-    setState(() {
-      default_institution = true;
-      institutionModel = InstitutionModel(
-        id: id,
-        name: prefs.getString('${prefix}_name') ?? '',
-        commercial: prefs.getBool('${prefix}_commercial') ?? false,
-        type: type,
-        address: prefs.getString('${prefix}_address') ?? '',
-        location: Location(
-          type: "Point",
-          coordinates: [
-            prefs.getDouble('${prefix}_lon') ?? 0.0,
-            prefs.getDouble('${prefix}_lat') ?? 0.0,
-          ],
-        ),
-        favourite: prefs.getBool('${prefix}_favourite') ?? false,
-        reviews: prefs.getStringList('${prefix}_reviews') ?? [],
-        averageRating: prefs.getDouble('${prefix}_average_rating') ?? 0.0,
-        minPrice: prefs.getDouble('${prefix}_min_price') ?? 0.0,
-        maxPrice: prefs.getDouble('${prefix}_max_price') ?? 0.0,
-      );
-
-      distance = prefs.getString('${prefix}_distance') ?? '--';
-      duration = prefs.getString('${prefix}_duration') ?? '--';
-    });
-    if (institutionModel != null) _loadFavours(institutionModel!.id);
+    try {
+      final result = await Api.getFavouriteInstitutions();
+      if (result is List && result.isNotEmpty) {
+        for (final item in result) {
+          final map = item is Map<String, dynamic> ? item : null;
+          if (map == null) continue;
+          final instType = map['type']?.toString() ?? '';
+          if (instType == type) {
+            final institution = InstitutionModel.fromJson(map);
+            if (!mounted) return;
+            setState(() {
+              default_institution = true;
+              institutionModel = institution.copyWith(favourite: true);
+              distance = '--';
+              duration = '--';
+            });
+            _loadFavours(institutionModel!.id);
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+    await _loadNearestInstitution();
   }
 
   void setValue() async {
@@ -150,7 +178,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
               height: getVerticalSize(16),
               width: getHorizontalSize(11),
               svgPath: ImageConstant.imgArrowleft,
-              margin: getMargin(left: 32, top: 12, bottom: 20),
+              margin: getMargin(left: 32, top: 12, bottom: 20), 
               onTap: () async {
                 final stop = await showDialog<bool>(
                   context: context,
@@ -202,9 +230,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                             AppBloc.requestCubit.medCardId = selectedContact.id;
                           } else {
                             MedcardRepository.fetchMyCard().then((value) {
-                              if (value != null) {
-                                AppBloc.requestCubit.medCardId = value.id;
-                              }
+                              AppBloc.requestCubit.medCardId = value.id;
                             });
                           }
                         },
@@ -251,6 +277,9 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                 builder: (_) => MedicCallPage(
                   favours: favours,
                   selectedContact: _selectedContact,
+                  selectedInstitution: institutionModel,
+                  institutionDistance: distance,
+                  institutionDuration: duration,
                 ),
               ),
             );
@@ -273,7 +302,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                       overflow: TextOverflow.ellipsis,
                       institutionModel != null && (favours == null || favours!.isEmpty)
                           ? 'Учреждение не работает'
-                          : (widget.text.isEmpty ? 'Выбрать причину' : widget.text),
+                          : (_displayReason.isEmpty ? 'Выбрать причину' : _displayReason),
                       style: AppStyle.txtMontserratSemiBold19,
                     ),
                   ),
@@ -317,7 +346,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                           ).show(context);
                           return;
                         }
-                        if (favours != null && favours!.isNotEmpty && widget.text.isEmpty) {
+                        if (favours != null && favours!.isNotEmpty && _displayReason.isEmpty) {
                           ElegantNotification.error(
                             description: const Text('Выберите причину'),
                           ).show(context);
@@ -333,7 +362,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                                   AppBloc.requestCubit.medCardId;
                           RequestStatusModel resopnse =
                               await AppBloc.requestCubit.createRequest(
-                            widget.text,
+                            _displayReason,
                             'med',
                             false,
                             institutionModel?.id ?? '',
@@ -414,7 +443,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                       },
                       child: Opacity(
                         opacity: (institutionModel != null && (favours == null || favours!.isEmpty)) ||
-                                (favours != null && favours!.isNotEmpty && widget.text.isEmpty)
+                                (favours != null && favours!.isNotEmpty && _displayReason.isEmpty)
                             ? 0.5
                             : 1,
                         child: SvgPicture.asset(on
@@ -427,7 +456,7 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: (institutionModel != null && (favours == null || favours!.isEmpty)) ||
-                          (favours != null && favours!.isNotEmpty && widget.text.isEmpty)
+                          (favours != null && favours!.isNotEmpty && _displayReason.isEmpty)
                       ? Colors.grey
                       : const Color.fromRGBO(219, 19, 91, 1),
                 ),
@@ -449,11 +478,18 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                         builder: (context) =>
                             const SelectInstituts(type: 'med'),
                       ),
-                    ).then((result) {
+                    ).then((result) async {
+                      var institution = result['institution'] as InstitutionModel?;
+                      if (institution != null) {
+                        institution =
+                            await _applyFavouriteFromApi(institution);
+                      }
+                      if (!mounted) return;
                       setState(() {
-                        institutionModel = result['institution'];
+                        institutionModel = institution;
                         distance = result['distance'] ?? '';
                         duration = result['duration'] ?? '';
+                        _displayReason = '';
                       });
                       if (institutionModel != null) {
                         _loadFavours(institutionModel!.id);
@@ -483,11 +519,18 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                               MaterialPageRoute(
                                   builder: (context) =>
                                       const SelectInstituts(type: 'med')))
-                          .then((result) {
+                          .then((result) async {
+                        var institution =
+                            result['institution'] as InstitutionModel?;
+                        if (institution != null) {
+                          institution = await _applyFavouriteFromApi(institution);
+                        }
+                        if (!mounted) return;
                         setState(() {
-                          institutionModel = result['institution'];
+                          institutionModel = institution;
                           distance = result['distance'] ?? '';
                           duration = result['duration'] ?? '';
+                          _displayReason = '';
                         });
                         if (institutionModel != null) {
                           _loadFavours(institutionModel!.id);
@@ -507,54 +550,58 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                           ),
                         ],
                       ),
-                      child: Column(
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Row(
+                          Column(
                             children: [
-                              Container(
-                                width: 67,
-                                height: 80,
-                                decoration: const BoxDecoration(
-                                  borderRadius: BorderRadius.only(
-                                      bottomRight: Radius.circular(30)),
-                                ),
-                                child: const Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    CustomImageView(
-                                      width: 30,
-                                      svgPath: 'assets/icons/medInst.svg',
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 67,
+                                    height: 80,
+                                    decoration: const BoxDecoration(
+                                      borderRadius: BorderRadius.only(
+                                          bottomRight: Radius.circular(30)),
                                     ),
-                                  ],
-                                ),
+                                    child: const Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        CustomImageView(
+                                          width: 30,
+                                          svgPath: 'assets/icons/medInst.svg',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          institutionModel?.name ?? '',
+                                          style: const TextStyle(
+                                            color: Color.fromRGBO(51, 132, 226, 1),
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          institutionModel?.address ?? '',
+                                          style: const TextStyle(
+                                            color: Color.fromRGBO(142, 150, 155, 1),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 32),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      institutionModel?.name ?? '',
-                                      style: const TextStyle(
-                                        color: Color.fromRGBO(51, 132, 226, 1),
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      institutionModel?.address ?? '',
-                                      style: const TextStyle(
-                                        color: Color.fromRGBO(142, 150, 155, 1),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(
+                              const Divider(
                             color: Color.fromRGBO(221, 222, 226, 1),
                           ),
                           Padding(
@@ -605,6 +652,21 @@ class _MedicalCallButtonState extends State<MedicalCallButton> {
                                 left: 14, bottom: 14, top: 15),
                             child: Row(
                               children: [],
+                            ),
+                          ),
+                            ],
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 10,
+                            child: Icon(
+                              institutionModel?.favourite == true
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              size: 28,
+                              color: institutionModel?.favourite == true
+                                  ? ColorConstant.blue30001
+                                  : Colors.grey,
                             ),
                           ),
                         ],

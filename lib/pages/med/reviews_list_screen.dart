@@ -8,16 +8,28 @@ import 'package:careme24/widgets/app_bar/appbar_image.dart';
 import 'package:careme24/widgets/app_bar/appbar_title.dart';
 import 'package:careme24/widgets/app_bar/custom_app_bar.dart';
 import 'package:careme24/widgets/custom_image_view.dart';
+import 'package:careme24/widgets/institution_review_dialog.dart';
 import 'package:careme24/widgets/review_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class ReviewsScreen extends StatefulWidget {
-  final String serviceId;
-  final String doctor_name;
-  ReviewsScreen({Key? key, required this.serviceId, required this.doctor_name})
-      : super(key: key);
+  final String? serviceId;
+  final String? doctor_name;
+  final bool is_institution;
+  final String? institutionId;
+  final String? institutionName;
+
+  ReviewsScreen({
+    Key? key,
+    this.serviceId,
+    this.doctor_name,
+    this.is_institution = false,
+    this.institutionId,
+    this.institutionName,
+  }) : super(key: key);
+
   @override
   State<ReviewsScreen> createState() => _ReviewsScreenState();
 }
@@ -30,9 +42,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   @override
   void initState() {
     super.initState();
-
-    context.read<ReviewCubit>().getReview(widget.serviceId);
-    context.read<ReviewCubit>().getAverage(widget.serviceId);
+    if (widget.is_institution && widget.institutionId != null) {
+      context.read<ReviewCubit>().getInstitutionReview(widget.institutionId!);
+      context.read<ReviewCubit>().getInstitutionAverage(widget.institutionId!);
+    } else if (widget.serviceId != null) {
+      context.read<ReviewCubit>().getReview(widget.serviceId!);
+      context.read<ReviewCubit>().getAverage(widget.serviceId!);
+    }
   }
 
   Widget _buildStar(int index) {
@@ -40,7 +56,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10), 
           onTap: () {
             setState(() {
               _rating = index;
@@ -55,8 +71,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   }
 
   Future<void> _fetchReviews() async {
-    await context.read<ReviewCubit>().getReview(widget.serviceId);
-    await context.read<ReviewCubit>().getAverage(widget.serviceId);
+    if (widget.is_institution && widget.institutionId != null) {
+      await context.read<ReviewCubit>().getInstitutionReview(widget.institutionId!);
+      await context.read<ReviewCubit>().getInstitutionAverage(widget.institutionId!);
+    } else if (widget.serviceId != null) {
+      await context.read<ReviewCubit>().getReview(widget.serviceId!);
+      await context.read<ReviewCubit>().getAverage(widget.serviceId!);
+    }
   }
 
   @override
@@ -76,8 +97,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           title: AppbarTitle(text: "Отзывы"),
           styleType: Style.bgFillBlue60001),
       body: BlocBuilder<ReviewCubit, ReviewState>(builder: (context, state) {
-        if (state is ReviewLoading) {
-          // reviews.clear();
+        if (state is ReviewLoading && reviews.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is ReviewLoaded) {
@@ -132,21 +152,32 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                       child: CustomGradientButton(
                         text: 'Оставить отзыв',
                         onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => BlocProvider.value(
-                              value: context.read<ReviewCubit>(),
-                              child: ReviewDialog(
-                                id: widget.serviceId,
-                                doctor_name: widget.doctor_name,
+                          if (widget.is_institution &&
+                              widget.institutionId != null) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => InstitutionReviewDialog(
+                                institutionName:
+                                    widget.institutionName ?? 'Учреждение',
+                                institutionId: widget.institutionId,
+                                onSubmit: (text, rating) {
+                                  context.read<ReviewCubit>().submitInstitutionReview(
+                                      text, rating, widget.institutionId!);
+                                },
                               ),
-                            ),
-                          );
-
-                          // showDialog(
-                          //   context: context,
-                          //   builder: (context) => ReviewDialog(id: '',),
-                          // );
+                            );
+                          } else if (widget.serviceId != null) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => BlocProvider.value(
+                                value: context.read<ReviewCubit>(),
+                                child: ReviewDialog(
+                                  id: widget.serviceId!,
+                                  doctor_name: widget.doctor_name ?? '',
+                                ),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ),
@@ -173,12 +204,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 8),
-
-                                  // Row(
-                                  //   mainAxisAlignment: MainAxisAlignment.center,
-                                  //   children: List.generate(
-                                  //       5, (index) => _buildStar(review["rating"].toInt() + 1)),
-                                  // ),
 
                                   Center(
                                     child: RatingBarIndicator(
@@ -211,7 +236,23 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                         },
                       ),
                     )
-                  : Container()
+                  : Expanded(
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3,
+                          child: const Center(
+                            child: Text(
+                              'Отзывов пока нет',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
             ],
           ),
         );

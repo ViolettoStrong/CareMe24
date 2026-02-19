@@ -120,6 +120,7 @@ void main() async {
     iOS: initializationSettingsIOS,
   );
 
+
   await flutterLocalNotificationsPlugin.initialize(
     initializationSettings,
     // onDidReceiveNotificationResponse: notificationTapForeground,

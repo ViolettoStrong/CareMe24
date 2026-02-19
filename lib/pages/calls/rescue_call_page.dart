@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:careme24/api/api.dart';
 import 'package:careme24/constants.dart';
+import 'package:careme24/models/institution_model.dart';
 import 'package:careme24/models/medcard/medcard_model.dart';
 import 'package:careme24/pages/calls/dialog_select_contact_med.dart';
 import 'package:careme24/pages/calls/main_call_page.dart';
@@ -58,10 +59,20 @@ final List<bool> reasonDisable = <bool>[
 ];
 
 class RescueCallPage extends StatefulWidget {
-  const RescueCallPage({super.key, this.favours, this.selectedContact});
+  const RescueCallPage({
+    super.key,
+    this.favours,
+    this.selectedContact,
+    this.selectedInstitution,
+    this.institutionDistance,
+    this.institutionDuration,
+  });
 
   final List<Map<String, dynamic>>? favours;
   final MedcardModel? selectedContact;
+  final InstitutionModel? selectedInstitution;
+  final String? institutionDistance;
+  final String? institutionDuration;
 
   @override
   State<RescueCallPage> createState() => _RescueCallPageState();
@@ -70,6 +81,8 @@ class RescueCallPage extends StatefulWidget {
 class _RescueCallPageState extends State<RescueCallPage> {
   bool isSelectedSwitch = false;
   MedcardModel? _selectedContact;
+  InstitutionModel? _institutionFromApi;
+  List<Map<String, dynamic>>? _favoursFromApi;
 
   TextEditingController componentfortyController = TextEditingController();
 
@@ -80,6 +93,7 @@ class _RescueCallPageState extends State<RescueCallPage> {
     super.initState();
     _selectedContact = widget.selectedContact;
     getMyCalls();
+    _loadFavouriteInstitution('mch');
     _controller.addListener(() {
       setState(() {
         if (_controller.value) {
@@ -89,6 +103,27 @@ class _RescueCallPageState extends State<RescueCallPage> {
         }
       });
     });
+  }
+
+  Future<void> _loadFavouriteInstitution(String type) async {
+    try {
+      final result = await Api.getFavouriteInstitutions();
+      if (result is! List || result.isEmpty) return;
+      for (final item in result) {
+        final map = item is Map<String, dynamic> ? item : null;
+        if (map == null) continue;
+        if ((map['type']?.toString() ?? '') == type) {
+          final institution = InstitutionModel.fromJson(map);
+          final list = await Api.getRequestFavours(institution.id);
+          if (!mounted) return;
+          setState(() {
+            _institutionFromApi = institution.copyWith(favourite: true);
+            _favoursFromApi = list;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
   }
 
   void setValue() async {
@@ -220,7 +255,7 @@ class _RescueCallPageState extends State<RescueCallPage> {
   }
 
   Widget _buildReasonList() {
-    final favoursList = widget.favours;
+    final favoursList = _favoursFromApi ?? widget.favours;
     if (favoursList != null) {
       if (favoursList.isEmpty) {
         return Center(
@@ -266,6 +301,10 @@ class _RescueCallPageState extends State<RescueCallPage> {
                         builder: (context) => RescueCallButton(
                               text: reasonText[index],
                               selectedContact: widget.selectedContact,
+                              initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                              initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                              initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                              initialFavours: _favoursFromApi ?? widget.favours,
                             )));
           },
           text: reasonText[index],
@@ -305,6 +344,10 @@ class _RescueCallPageState extends State<RescueCallPage> {
                 builder: (context) => RescueCallButton(
                   text: name,
                   selectedContact: widget.selectedContact,
+                  initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
+                  initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
+                  initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
+                  initialFavours: _favoursFromApi ?? widget.favours,
                 ),
               ),
             );

@@ -111,6 +111,26 @@ class HttpManager {
     }
   }
 
+  /// POST with application/x-www-form-urlencoded body (e.g. for Swagger form params).
+  Future<dynamic> postForm(
+    String url, {
+    required Map<String, dynamic> data,
+    dynamic params,
+  }) async {
+    try {
+      final response = await _dio.post(
+        url,
+        data: data,
+        queryParameters: params,
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      return response.data;
+    } on DioException catch (error) {
+      log('POST Form Error: $error');
+      rethrow;
+    }
+  }
+
   Future<(dynamic, int)> postWithResponseCode(
     String url, {
     // String? customBaseUrl,
@@ -140,6 +160,26 @@ class HttpManager {
       return response.data;
     } on DioException catch (error) {
       log('DELETE Error: $error');
+      rethrow;
+    }
+  }
+
+  /// DELETE with application/x-www-form-urlencoded body.
+  Future<dynamic> deleteForm(
+    String url, {
+    required Map<String, dynamic> data,
+    dynamic params,
+  }) async {
+    try {
+      final response = await _dio.delete(
+        url,
+        data: data,
+        queryParameters: params,
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      return response.data;
+    } on DioException catch (error) {
+      log('DELETE Form Error: $error');
       rethrow;
     }
   }

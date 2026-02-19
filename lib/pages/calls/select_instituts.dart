@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:careme24/api/api.dart';
 import 'package:careme24/blocs/app_bloc.dart';
 import 'package:careme24/blocs/dangerous/dangerous_cubit.dart';
 import 'package:careme24/blocs/institution/institution_cubit.dart';
@@ -35,7 +36,11 @@ class _SelectInstitutsState extends State<SelectInstituts> {
   bool _finish = false;
   bool _undo = false;
   bool _priceAsc = true;
+  bool _distanceAsc = true;
+  bool _ratingDesc = true;
   bool distanteOk = false;
+  /// Եթե այս էկրանում «Оставить по умолчанию» սեղմեցին, back-ով դուրս գալիս վերադարձնում ենք այդ արդյունքը։
+  Map<String, dynamic>? _resultIfBackAfterFavourite;
 
   @override
   void initState() {
@@ -59,8 +64,18 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                 double.tryParse(b['distance'].toString()) ?? double.infinity;
             return da.compareTo(db);
 
+          case SortType.distanceDesc:
+            final da =
+                double.tryParse(a['distance'].toString()) ?? double.infinity;
+            final db =
+                double.tryParse(b['distance'].toString()) ?? double.infinity;
+            return db.compareTo(da);
+
           case SortType.rating:
             return instB.averageRating.compareTo(instA.averageRating);
+
+          case SortType.ratingAsc:
+            return instA.averageRating.compareTo(instB.averageRating);
 
           case SortType.priceAsc:
             final pa = (instA.minPrice + instA.maxPrice) / 2;
@@ -140,10 +155,16 @@ class _SelectInstitutsState extends State<SelectInstituts> {
         height: getVerticalSize(48),
         leadingWidth: 43,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 8.0), // 👉 որքան աջ ես ուզում
+          padding: const EdgeInsets.only(left: 8.0),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (_resultIfBackAfterFavourite != null) {
+                Navigator.pop(context, _resultIfBackAfterFavourite);
+              } else {
+                Navigator.pop(context);
+              }
+            },
           ),
         ),
         centerTitle: true,
@@ -182,9 +203,12 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                             _finish = false;
                             _undo = false;
                             _wait = true;
+                            _distanceAsc = !_distanceAsc;
                           });
                           distanteOk
-                              ? sortInstitutions(SortType.distance)
+                              ? sortInstitutions(_distanceAsc
+                                  ? SortType.distance
+                                  : SortType.distanceDesc)
                               : ElegantNotification.info(
                                       description: const Text(
                                           'Расстояние еще не рассчитано, попробуйте позже'))
@@ -235,8 +259,11 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                             _finish = true;
                             _undo = false;
                             _wait = false;
+                            _ratingDesc = !_ratingDesc;
                           });
-                          sortInstitutions(SortType.rating);
+                          sortInstitutions(_ratingDesc
+                              ? SortType.rating
+                              : SortType.ratingAsc);
                         },
                         child: Container(
                           width: getHorizontalSize(109),
@@ -358,49 +385,53 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                                   color: Color.fromRGBO(0, 0, 0, 0.24)),
                             ],
                           ),
-                          child: Column(
+                          child: Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              Row(
+                              Column(
                                 children: [
-                                  Container(
-                                    width: 67,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: getColor(institution.type),
-                                      borderRadius: const BorderRadius.only(
-                                          bottomRight: Radius.circular(30)),
-                                    ),
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        CustomImageView(
-                                            svgPath:
-                                                getImage(institution.type)),
-                                      ],
-                                    ),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 67,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: getColor(institution.type),
+                                          borderRadius: const BorderRadius.only(
+                                              bottomRight: Radius.circular(30)),
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            CustomImageView(
+                                                svgPath:
+                                                    getImage(institution.type)),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(institution.name,
+                                                style: const TextStyle(
+                                                    color: Color(0xFF3384E2),
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w600)),
+                                            Text(institution.address,
+                                                style: const TextStyle(
+                                                    color: Color(0xFF8E969B),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500)),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 32),
+                                    ],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(institution.name,
-                                            style: const TextStyle(
-                                                color: Color(0xFF3384E2),
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600)),
-                                        Text(institution.address,
-                                            style: const TextStyle(
-                                                color: Color(0xFF8E969B),
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Divider(color: Color(0xFFDDDEE2)),
+                                  const Divider(color: Color(0xFFDDDEE2)),
                               Padding(
                                 padding:
                                     const EdgeInsets.only(left: 14, top: 15),
@@ -472,67 +503,71 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                                         color: Colors.transparent,
                                         child: InkWell(
                                             onTap: () async {
-                                              final prefs =
-                                                  await SharedPreferences
-                                                      .getInstance();
-                                              final prefix =
-                                                  'default_institution_${widget.type}';
-
-                                              await prefs.setString(
-                                                  '${prefix}_id',
-                                                  institution.id);
-                                              await prefs.setString(
-                                                  '${prefix}_name',
-                                                  institution.name);
-                                              await prefs.setBool(
-                                                  '${prefix}_commercial',
-                                                  institution.commercial);
-                                              await prefs.setString(
-                                                  '${prefix}_address',
-                                                  institution.address);
-                                              await prefs.setDouble(
-                                                  '${prefix}_lat',
-                                                  institution
-                                                      .location.coordinates[1]);
-                                              await prefs.setDouble(
-                                                  '${prefix}_lon',
-                                                  institution
-                                                      .location.coordinates[0]);
-                                              await prefs.setString(
-                                                  '${prefix}_distance',
-                                                  distance.toString());
-                                              await prefs.setString(
-                                                  '${prefix}_duration',
-                                                  duration.toString());
-
-                                              // ➕ rating
-                                              await prefs.setDouble(
-                                                  '${prefix}_average_rating',
-                                                  institution.averageRating);
-
-// ➕ min / max գին
-                                              await prefs.setDouble(
-                                                  '${prefix}_min_price',
-                                                  institution.minPrice);
-                                              await prefs.setDouble(
-                                                  '${prefix}_max_price',
-                                                  institution.maxPrice);
-
-                                              if (!mounted) return;
-                                              ElegantNotification.success(
-                                                description: const Text(
-                                                    'Учреждение сохранено по умолчанию'),
-                                              ).show(context);
+                                              if (institution.favourite) {
+                                                await Api.deleteFavouriteInstitution(institution.id);
+                                                if (!mounted) return;
+                                                setState(() {
+                                                  _resultIfBackAfterFavourite = null;
+                                                  enrichedList = enrichedList!.map((e) {
+                                                    final inst = e['institution'] as InstitutionModel;
+                                                    if (inst.id == institution.id) {
+                                                      return {...e, 'institution': inst.copyWith(favourite: false)};
+                                                    }
+                                                    return e;
+                                                  }).toList();
+                                                });
+                                                ElegantNotification.success(
+                                                  description: const Text('Удалено из избранного'),
+                                                ).show(context);
+                                                return;
+                                              }
+                                              try {
+                                                final list = await Api.getFavouriteInstitutions();
+                                                if (list is List && list.isNotEmpty) {
+                                                  for (final item in list) {
+                                                    final map = item is Map<String, dynamic> ? item : null;
+                                                    if (map != null && (map['type']?.toString() ?? '') == widget.type) {
+                                                      final id = map['id']?.toString();
+                                                      if (id != null && id.isNotEmpty) {
+                                                        await Api.deleteFavouriteInstitution(id);
+                                                      }
+                                                      break;
+                                                    }
+                                                  }
+                                                }
+                                                await Api.postFavouriteInstitution(institution.id);
+                                                if (!mounted) return;
+                                                setState(() {
+                                                  _resultIfBackAfterFavourite = {
+                                                    'institution': institution.copyWith(favourite: true),
+                                                    'distance': distance,
+                                                    'duration': duration,
+                                                  };
+                                                  enrichedList = enrichedList!.map((e) {
+                                                    final inst = e['institution'] as InstitutionModel;
+                                                    final isThis = inst.id == institution.id;
+                                                    final sameType = inst.type == widget.type;
+                                                    if (sameType) {
+                                                      return {...e, 'institution': inst.copyWith(favourite: isThis)};
+                                                    }
+                                                    return e;
+                                                  }).toList();
+                                                });
+                                                ElegantNotification.success(
+                                                  description: const Text('Учреждение сохранено по умолчанию'),
+                                                ).show(context);
+                                              } catch (_) {
+                                                if (!mounted) return;
+                                                ElegantNotification.error(
+                                                  description: const Text('Ошибка, попробуйте позже'),
+                                                ).show(context);
+                                              }
                                             },
                                             child: Container(
-                                              width: MediaQuery.of(context)
-                                                      .size
-                                                      .width *
-                                                  0.8,
-                                              //height: 2,
-                                              child: const Text(
-                                                'Оставить по умолчанию',
-                                                style: TextStyle(
+                                              width: MediaQuery.of(context).size.width * 0.8,
+                                              child: Text(
+                                                institution.favourite ? 'Удалить из избранного' : 'Оставить по умолчанию',
+                                                style: const TextStyle(
                                                   color: Color(0xFF5FB2FF),
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w500,
@@ -542,6 +577,18 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                                   ],
                                 ),
                               ),
+                                ],
+                              ),
+                              if (institution.favourite)
+                                Positioned(
+                                  top: 6,
+                                  right: 10,
+                                  child: Icon(
+                                    Icons.favorite,
+                                    size: 28,
+                                    color: ColorConstant.blue30001,
+                                  ),
+                                ),
                             ],
                           ),
                         )),
@@ -586,7 +633,9 @@ Color? getColor(String type) {
 
 enum SortType {
   distance,
+  distanceDesc,
   rating,
+  ratingAsc,
   priceAsc,
   priceDesc,
 }
