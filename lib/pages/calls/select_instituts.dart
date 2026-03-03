@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:math' show cos, sqrt, asin, sin, pi;
 
 import 'package:careme24/api/api.dart';
 import 'package:careme24/blocs/app_bloc.dart';
@@ -11,15 +11,12 @@ import 'package:careme24/theme/app_style.dart';
 import 'package:careme24/theme/color_constant.dart';
 import 'package:careme24/utils/image_constant.dart';
 import 'package:careme24/utils/size_utils.dart';
-import 'package:careme24/widgets/app_bar/appbar_image.dart';
 import 'package:careme24/widgets/app_bar/appbar_title.dart';
 import 'package:careme24/widgets/app_bar/custom_app_bar.dart';
 import 'package:careme24/widgets/custom_image_view.dart';
 import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 class SelectInstituts extends StatefulWidget {
   const SelectInstituts({super.key, required this.type});
@@ -48,6 +45,16 @@ class _SelectInstitutsState extends State<SelectInstituts> {
     AppBloc.institutionCubit.fetchData(widget.type);
   }
 
+  static double _distanceAsDouble(dynamic d) {
+    if (d == null) return double.infinity;
+    return double.tryParse(d.toString()) ?? double.infinity;
+  }
+
+  static String _formatDistance(dynamic d) {
+    final s = d?.toString() ?? '--';
+    return s.length > 6 ? s.substring(0, 6) : s;
+  }
+
   void sortInstitutions(SortType type) {
     if (enrichedList == null) return;
 
@@ -58,17 +65,13 @@ class _SelectInstitutsState extends State<SelectInstituts> {
 
         switch (type) {
           case SortType.distance:
-            final da =
-                double.tryParse(a['distance'].toString()) ?? double.infinity;
-            final db =
-                double.tryParse(b['distance'].toString()) ?? double.infinity;
+            final da = _distanceAsDouble(a['distance']);
+            final db = _distanceAsDouble(b['distance']);
             return da.compareTo(db);
 
           case SortType.distanceDesc:
-            final da =
-                double.tryParse(a['distance'].toString()) ?? double.infinity;
-            final db =
-                double.tryParse(b['distance'].toString()) ?? double.infinity;
+            final da = _distanceAsDouble(a['distance']);
+            final db = _distanceAsDouble(b['distance']);
             return db.compareTo(da);
 
           case SortType.rating:
@@ -91,60 +94,57 @@ class _SelectInstitutsState extends State<SelectInstituts> {
     });
   }
 
-  Future<void> enrichDistances(List<InstitutionModel> list) async {
+  /// Haversine: հեռավորություն կմ (կամ null եթե կոորդինատները անվավեր)
+  static double? _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    if (lat1.isNaN || lon1.isNaN || lat2.isNaN || lon2.isNaN) return null;
+    const r = 6371.0; // Earth radius km
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * asin(sqrt(a));
+    return r * c;
+  }
+
+  void enrichDistances(List<InstitutionModel> list) {
     final userLat = BlocProvider.of<DangerousCubit>(context).lat;
     final userLon = BlocProvider.of<DangerousCubit>(context).lon;
 
-    final newList = await Future.wait(list.map((item) async {
-      final data = await calculateDistanceAndTime(
-        userLat: userLat,
-        userLon: userLon,
-        instLat: item.location.coordinates[1],
-        instLon: item.location.coordinates[0],
-      );
-      distanteOk = true;
-      return {
+    final newList = <Map<String, dynamic>>[];
+    for (final item in list) {
+      final coords = item.location.coordinates;
+      if (coords.length < 2) {
+        newList.add({
+          'institution': item,
+          'distance': null,
+          'duration': null,
+        });
+        continue;
+      }
+      final instLon = coords[0].toDouble();
+      final instLat = coords[1].toDouble();
+      final km = _haversineKm(userLat, userLon, instLat, instLon);
+      if (km == null) {
+        newList.add({
+          'institution': item,
+          'distance': null,
+          'duration': null,
+        });
+        continue;
+      }
+      final distanceStr = km.toStringAsFixed(1);
+      final durationMin = (km / 50 * 60).round();
+      newList.add({
         'institution': item,
-        'distance': data?['distance'] ?? '--',
-        'duration': data?['duration'] ?? '--',
-      };
-    }));
-
+        'distance': distanceStr,
+        'duration': durationMin.toString(),
+      });
+    }
+    distanteOk = true;
     if (mounted) {
       setState(() {
         enrichedList = newList;
       });
-    }
-  }
-
-  Future<Map<String, String>?> calculateDistanceAndTime({
-    required double userLat,
-    required double userLon,
-    required double instLat,
-    required double instLon,
-  }) async {
-    final url =
-        'https://router.project-osrm.org/route/v1/driving/$userLon,$userLat;$instLon,$instLat?overview=false';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode != 200) return null;
-
-      final data = jsonDecode(response.body);
-
-      final distance = data['routes'][0]['distance'];
-      final duration = data['routes'][0]['duration'];
-
-      final distanceKm = (distance / 1000).toStringAsFixed(1);
-      final durationMin = (duration / 60).round().toString();
-
-      return {
-        'distance': distanceKm,
-        'duration': durationMin,
-      };
-    } catch (_) {
-      return null;
     }
   }
 
@@ -176,14 +176,10 @@ class _SelectInstitutsState extends State<SelectInstituts> {
           if (state is InstitutionLoaded) {
             final list = state.institutionList;
             if (enrichedList == null) {
-              enrichedList = list
-                  .map((e) => {
-                        'institution': e,
-                        'distance': '--',
-                        'duration': '--',
-                      })
-                  .toList();
-              enrichDistances(list);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) enrichDistances(list);
+              });
+              return const Center(child: CircularProgressIndicator.adaptive());
             }
 
             return Column(children: [
@@ -439,22 +435,16 @@ class _SelectInstitutsState extends State<SelectInstituts> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    if (distance == '--')
-                                      SizedBox(
-                                        width: 15,
-                                        height: 15,
-                                        child:
-                                            const CircularProgressIndicator(),
+                                    if (distance != null && distance != '--')
+                                      Text(
+                                        '${_formatDistance(distance)} км',
+                                        style: const TextStyle(
+                                          color: Color(0xFF2C3E4F),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    Text(
-                                      '${distance.length > 5 ? distance.substring(0, 6) : distance} км',
-                                      style: const TextStyle(
-                                        color: Color(0xFF2C3E4F),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
+                                    if (distance != null && distance != '--') SizedBox(width: 12),
                                     Row(
                                       children: [
                                         const Icon(Icons.star,

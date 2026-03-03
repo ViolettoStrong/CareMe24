@@ -72,7 +72,7 @@ class InfoIcon extends StatelessWidget {
                                                                     "Химическое заражение"
                                                                 ? "Хим.заражение"
                                                                 : icon.incidentType ==
-                                                                        "Вирусное / бактериологическое заражение"
+                                                                        "Вирусное заражение"
                                                                     ? "Вирус. заражение"
                                                                     : icon.incidentType ==
                                                                             "Аллерген"
@@ -90,7 +90,7 @@ class InfoIcon extends StatelessWidget {
                                                                                             ? "Лавина"
                                                                                             : icon.incidentType == "Сильный туман"
                                                                                                 ? "Туман"
-                                                                                                : icon.incidentType == "Камнепад / Оползень"
+                                                                                                : icon.incidentType == "Камнепад"
                                                                                                     ? "Камнепад"
                                                                                                     : "",
                 textAlign: TextAlign.center,

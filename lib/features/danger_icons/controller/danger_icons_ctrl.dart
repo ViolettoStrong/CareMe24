@@ -83,14 +83,14 @@ class DangerIconsCtrl with ChangeNotifier {
       "Гололёд": "Не активно",
       "Сильный туман": "Не активно",
       "Снежная лавина": "Не активно",
-      "Камнепад / Оползень": "Не активно",
+      "Камнепад": "Не активно",
       "Извержение вулкана": "Не активно",
       "Пожар": "Безопасно",
       "Наводнение": "Безопасно",
       "Террористическая опасность": "Безопасно",
       "Воздушная тревога": "Безопасно",
       "Химическое заражение": "Безопасно",
-      "Вирусное / бактериологическое заражение": "Безопасно",
+      "Вирусное заражение": "Безопасно",
     };
 
     _defaultIcons = [];
@@ -212,6 +212,16 @@ class DangerIconsCtrl with ChangeNotifier {
     }
   }
 
+  /// Туман: ТНВ — температура воздуха, ТТР — точка росы. Если дождь — красный не включать.
+  /// Разница > 3°C → не активно; 1–3°C → Повышенный (жёлтый); < 1°C → Опасный (красный).
+  String getFogLevel(double airTempC, double dewPointC, double precipitationMm) {
+    if (precipitationMm > 0.5) return 'Не активно'; // идёт дождь — вероятность тумана мала
+    final diff = airTempC - dewPointC;
+    if (diff > 3) return 'Не активно';
+    if (diff >= 1) return 'Повышенный';
+    return 'Опасный';
+  }
+
   Future<Position?> _getPosition() async {
     try {
       Position location = await Geolocator.getCurrentPosition();
@@ -277,12 +287,32 @@ class DangerIconsCtrl with ChangeNotifier {
         );
       }
 
+      _fetchedIcons.removeWhere((e) => e.incidentType == 'Сильный туман');
+
       pressureAndWind = await DangerousInfoRepository.fetchPressure({
         'latitude': lat,
         'longitude': lon,
-        'hourly': 'pressure_msl,wind_speed_10m,wind_direction_10m',
+        'hourly': 'pressure_msl,wind_speed_10m,wind_direction_10m,temperature_2m,dew_point_2m,precipitation',
         'forecast_days': 7,
       });
+
+      final airTemp = weatherForecast.currentTemperature.toDouble();
+      final dewPoint = pressureAndWind.currentDewPoint.toDouble();
+      final precip = pressureAndWind.currentPrecipitation.toDouble();
+      final fogLevel = getFogLevel(airTemp, dewPoint, precip);
+      if (fogLevel == 'Повышенный' || fogLevel == 'Опасный') {
+        _fetchedIcons.add(
+          DangerModel(
+            incidentType: 'Сильный туман',
+            country: 'country',
+            city: city,
+            comment: 'Температура и точка росы',
+            type: 'weather',
+            dangerLevel: fogLevel,
+            isActive: true,
+          ),
+        );
+      }
 
       int airPollutionIndex =
           airQuality.list.isNotEmpty ? airQuality.list[0].aqi : 0;
@@ -305,7 +335,22 @@ class DangerIconsCtrl with ChangeNotifier {
             dangerLevel: level,
             isActive: level != 'Не активно',
           );
-          break;
+        }
+        if (icon.incidentType == "Сильный туман") {
+          final level = getFogLevel(
+            weatherForecast.currentTemperature.toDouble(),
+            pressureAndWind.currentDewPoint.toDouble(),
+            pressureAndWind.currentPrecipitation.toDouble(),
+          );
+          _defaultIcons[_defaultIcons.indexOf(icon)] = DangerModel(
+            incidentType: icon.incidentType,
+            country: icon.country,
+            city: icon.city,
+            comment: icon.comment,
+            type: icon.type,
+            dangerLevel: level,
+            isActive: level != 'Не активно',
+          );
         }
       }
 

@@ -7,6 +7,10 @@ class PressureAndWindData {
   final List<num> pressureList;
   final List<num> windSpeedList;
   final List<num> windDirectionList;
+  /// Точка росы (°C) для расчёта тумана
+  final num currentDewPoint;
+  /// Осадки (мм) — если > 0.5, дождь, туман не показываем красным
+  final num currentPrecipitation;
 
   PressureAndWindData({
     required this.haveData,
@@ -17,6 +21,8 @@ class PressureAndWindData {
     required this.pressureList,
     required this.windSpeedList,
     required this.windDirectionList,
+    this.currentDewPoint = 0,
+    this.currentPrecipitation = 0,
   });
 
   factory PressureAndWindData.fromJson(Map<String, dynamic>? json) {
@@ -35,6 +41,14 @@ class PressureAndWindData {
     final windDirectionList =
         (json?['hourly']?['wind_direction_10m'] as List<dynamic>? ?? [])
             .map((e) => e as num)
+            .toList();
+    final dewPointList =
+        (json?['hourly']?['dew_point_2m'] as List<dynamic>? ?? [])
+            .map((e) => (e as num).toDouble())
+            .toList();
+    final precipitationList =
+        (json?['hourly']?['precipitation'] as List<dynamic>? ?? [])
+            .map((e) => (e as num).toDouble())
             .toList();
 
     if (pressureList.isEmpty ||
@@ -58,6 +72,14 @@ class PressureAndWindData {
         ? windDirectionList[currentHour]
         : windDirectionList.last;
 
+    final currentDewPoint = dewPointList.isNotEmpty && currentHour < dewPointList.length
+        ? dewPointList[currentHour]
+        : (dewPointList.isNotEmpty ? dewPointList.last : 0.0);
+
+    final currentPrecipitation = precipitationList.isNotEmpty && currentHour < precipitationList.length
+        ? precipitationList[currentHour]
+        : (precipitationList.isNotEmpty ? precipitationList.last : 0.0);
+
     return PressureAndWindData(
       haveData: true,
       currentPressure: currentPressure,
@@ -67,6 +89,8 @@ class PressureAndWindData {
       pressureList: pressureList,
       windSpeedList: windSpeedList,
       windDirectionList: windDirectionList,
+      currentDewPoint: currentDewPoint,
+      currentPrecipitation: currentPrecipitation,
     );
   }
 }

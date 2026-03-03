@@ -25,19 +25,51 @@ class InstitutionModel {
     required this.maxPrice,
   });
 
+  static String _stringFromJson(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is Map) {
+      final m = value;
+      final v = m['ru'] ?? m['name'] ?? m['en'];
+      if (v != null) return v.toString();
+      return m.isEmpty ? '' : m.values.first.toString();
+    }
+    return value.toString();
+  }
+
+  static double _doubleFromJson(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
+  static List<String> _reviewsFromJson(dynamic value) {
+    if (value == null || value is! List) return [];
+    final list = <String>[];
+    for (final e in value) {
+      if (e is String) {
+        list.add(e);
+      } else if (e is Map) {
+        final text = e['text'] ?? e['username'] ?? e['id'];
+        if (text != null) list.add(text.toString());
+      }
+    }
+    return list;
+  }
+
   factory InstitutionModel.fromJson(Map<String, dynamic> json) {
     return InstitutionModel(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
+      id: _stringFromJson(json['id']),
+      name: _stringFromJson(json['name']),
       commercial: json['commercial'] ?? false,
-      type: json['type'] ?? '',
-      address: json['address'] ?? '',
-      location: Location.fromJson(json['location'] ?? {}),
+      type: _stringFromJson(json['type']),
+      address: _stringFromJson(json['address']),
+      location: Location.fromJson(Map<String, dynamic>.from(json['location'] is Map ? json['location'] as Map : {})),
       favourite: json['favourite'] ?? false,
-      reviews: List<String>.from(json['reviews'] ?? []),
+      reviews: _reviewsFromJson(json['reviews']),
       averageRating: (json['average_rating'] ?? 0).toDouble(),
-      minPrice: json['min_price'] ?? 0.0,
-      maxPrice: json['max_price'] ?? 0.0,
+      minPrice: _doubleFromJson(json['min_price']),
+      maxPrice: _doubleFromJson(json['max_price']),
     );
   }
 
@@ -68,11 +100,13 @@ class Location {
   });
 
   factory Location.fromJson(Map<String, dynamic> json) {
+    final typeVal = json['type'];
+    final typeStr = typeVal is String ? typeVal : (typeVal is Map ? (typeVal['ru'] ?? typeVal['name'] ?? typeVal['en'] ?? '').toString() : '');
+    final coords = json['coordinates'];
+    final list = coords is List ? coords : <dynamic>[];
     return Location(
-      type: json['type'] ?? '',
-      coordinates: (json['coordinates'] as List? ?? [])
-          .map((e) => (e as num).toDouble())
-          .toList(),
+      type: typeStr,
+      coordinates: list.map((e) => (e is num ? e : double.tryParse(e.toString()) ?? 0.0).toDouble()).toList(),
     );
   }
 }

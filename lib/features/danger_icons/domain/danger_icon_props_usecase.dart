@@ -102,7 +102,7 @@ String getIcon(String value) {
       return 'assets/images/img_tsunami.svg';
     case 'Химическое заражение': //!
       return 'assets/images/1.svg';
-    case 'Вирусное / бактериологическое заражение': //!
+    case 'Вирусное заражение': //!
       return 'assets/images/virus.svg';
     case 'Гололёд':
       return 'assets/images/22n.svg';
@@ -110,7 +110,7 @@ String getIcon(String value) {
       return 'assets/images/img_fog.svg';
     case 'Снежная лавина': //!
       return 'assets/images/img_snow_avalanche.svg';
-    case 'Камнепад / Оползень': //!
+    case 'Камнепад': //!
       return 'assets/images/img_rockfall.svg';
     case 'Извержение вулкана': //!
       return 'assets/images/img_volcano.svg';
@@ -298,7 +298,7 @@ List getRec(String value) {
             text:
                 'Очистите от пепла крышу дома, чтобы исключить ее перегрузку и разрушение.'),
       ];
-    case 'Камнепад / Оползень':
+    case 'Камнепад':
       return [
         Recomendation(
             imagePath: 'assets/images/35.png',
@@ -465,7 +465,7 @@ List getRec(String value) {
             text:
                 'Тщательно мойте перед едой руки и полощите рот 0.5%-ным раствором питьевой соды'),
       ];
-    case "Вирусное / бактериологическое заражение":
+    case "Вирусное заражение":
       return [
         Recomendation(
             imagePath: 'assets/images/37.png',

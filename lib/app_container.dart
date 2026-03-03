@@ -87,10 +87,23 @@ class _AppContainerState extends State<AppContainer> {
     FirebaseSetup();
   }
 
+  /// Значки без сигнала опасности — только бесшумный push (Туман, Гололёд, температура, ветер, солн. радиация, атм. давление).
+  static const _silentDangerTypes = {
+    'Сильный туман',
+    'Гололёд',
+    'Солнечная радиация',
+    'Атмосферное давление',
+    'Температура',
+    'Ветер',
+  };
+
   onMessage(RemoteMessage message) {
+    final incidentType = message.data['incident_type']?.toString() ?? message.data['type']?.toString() ?? '';
+    final silentPush = _silentDangerTypes.contains(incidentType);
     showNotification(
       message,
-      isSiren: message.data.isNotEmpty,
+      isSiren: !silentPush && message.data.isNotEmpty,
+      silent: silentPush,
     );
 
     if (message.data.isNotEmpty) {
@@ -101,7 +114,7 @@ class _AppContainerState extends State<AppContainer> {
     }
   }
 
-  void showNotification(RemoteMessage message, {bool isSiren = false}) async {
+  void showNotification(RemoteMessage message, {bool isSiren = false, bool silent = false}) async {
     AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'high_importance_channel', // Channel ID
@@ -109,16 +122,15 @@ class _AppContainerState extends State<AppContainer> {
       channelDescription: 'This channel is used for important notifications.',
       importance: Importance.high,
       priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound(
+      sound: silent ? null : RawResourceAndroidNotificationSound(
         isSiren ? 'alarm_meloboom' : 'alarm_sound',
-      ), // Custom MP3 for Android
-      playSound: true,
+      ),
+      playSound: !silent,
     );
 
-    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+    DarwinNotificationDetails iOSPlatformChannelSpecifics =
         DarwinNotificationDetails(
-      sound:
-          'alarm_sound.wav', // Custom MP3/WAV for iOS (must be in "Resources")
+      sound: silent ? null : 'alarm_sound.wav',
     );
 
     NotificationDetails platformChannelSpecifics = NotificationDetails(

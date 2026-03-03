@@ -18,6 +18,10 @@ class ContactWidget extends StatelessWidget {
   final bool onlyDelete;
   final bool verifyButton;
   final VoidCallback? onVerifyButtonTap;
+  final bool showNotificationToggle;
+  final bool notifToMe;
+  final bool sendNotifications;
+  final Future<void> Function(bool value)? onNotificationToggle;
 
   const ContactWidget({
     super.key,
@@ -31,6 +35,10 @@ class ContactWidget extends StatelessWidget {
     this.onVerifyButtonTap,
     this.onlyDelete = false,
     this.verifyButton = false,
+    this.showNotificationToggle = false,
+    this.notifToMe = false,
+    this.sendNotifications = false,
+    this.onNotificationToggle,
   });
 
   @override
@@ -142,6 +150,44 @@ class ContactWidget extends StatelessWidget {
                       ],
                     ),
                     const Spacer(),
+                    if (showNotificationToggle)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Уведомить',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: (notifToMe && sendNotifications)
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xff8E969B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _RectangularNotificationSwitch(
+                              value: notifToMe && sendNotifications,
+                              onTap: () async {
+                                if (!notifToMe) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Включите главный переключатель уведомлений',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final newValue = !(notifToMe && sendNotifications);
+                                await onNotificationToggle?.call(newValue);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     if (verifyButton)
                       Material(
                           color: Colors.transparent,
@@ -171,5 +217,53 @@ class ContactWidget extends StatelessWidget {
                 ),
               ),
             )));
+  }
+}
+
+class _RectangularNotificationSwitch extends StatelessWidget {
+  const _RectangularNotificationSwitch({
+    required this.value,
+    required this.onTap,
+  });
+
+  final bool value;
+  final VoidCallback onTap;
+
+  static const double _width = 48;
+  static const double _height = 26;
+  static const double _radius = 5;
+  static const Color _activeColor = Color(0xFF4CAF50);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        width: _width,
+        height: _height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_radius),
+          color: value ? _activeColor : Colors.grey.shade300,
+        ),
+        child: Align(
+          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

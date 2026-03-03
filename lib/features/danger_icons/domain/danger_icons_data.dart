@@ -44,7 +44,7 @@ final List<Map<String, String>> dataIcons = [
     "danger_level": " ",
   },
   {
-    "incident_type": "Вирусное / бактериологическое заражение",
+    "incident_type": "Вирусное заражение",
     "danger_level": " ",
   },
   {
@@ -60,7 +60,7 @@ final List<Map<String, String>> dataIcons = [
     "danger_level": " ",
   },
   {
-    "incident_type": "Камнепад / Оползень",
+    "incident_type": "Камнепад",
     "danger_level": " ",
   },
   {

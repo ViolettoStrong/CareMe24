@@ -10,9 +10,11 @@ class ExtrenalCallsWidget extends StatelessWidget {
   const ExtrenalCallsWidget({
     super.key,
     required this.fromMe,
+    this.onNotifToMeChanged,
   });
 
   final bool fromMe;
+  final VoidCallback? onNotifToMeChanged;
   Future<Map<String, bool>> _getNotificationSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final notifToMe = prefs.getBool('pay_switch_value_notif_tome') ?? false;
@@ -66,6 +68,7 @@ class ExtrenalCallsWidget extends StatelessWidget {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setBool(
                             'pay_switch_value_notif_tome', value);
+                        onNotifToMeChanged?.call();
                       },
                       on: notifToMe,
                     )

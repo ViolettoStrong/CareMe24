@@ -9,6 +9,7 @@ class ContactModel {
   final bool verified;
   final bool admin;
   final bool enable;
+  final bool sendNotifications;
 
   ContactModel({
     required this.id,
@@ -18,6 +19,7 @@ class ContactModel {
     required this.verified,
     required this.admin,
     required this.enable,
+    required this.sendNotifications,
   });
 
   factory ContactModel.fromJson(Map<String, dynamic> json) {
@@ -44,7 +46,8 @@ class ContactModel {
                 balance: 0),
         verified: json['verified'] ?? false,
         admin: json['admin'] ?? false,
-        enable: json['enabled'] ?? false);
+        enable: json['enabled'] ?? false,
+        sendNotifications: json['send_notifications'] ?? false);
   }
 
   static String getName(bool isOther, Map<String, dynamic> json) {

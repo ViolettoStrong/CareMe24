@@ -13,9 +13,11 @@ import 'package:careme24/widgets/contact/contact_widget.dart';
 import 'package:careme24/widgets/contact/extrenal_calls_row.dart';
 import 'package:careme24/widgets/contact/no_contact_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:careme24/api/api.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CallsPage extends StatefulWidget {
   const CallsPage({super.key});
@@ -27,13 +29,24 @@ class CallsPage extends StatefulWidget {
 class _CallsPageState extends State<CallsPage> {
   bool fromMe = true;
   late bool authorization;
+  bool notifToMe = false;
 
   @override
   void initState() {
+    super.initState();
     final appState = context.read<ApplicationCubit>().state;
     authorization = appState is ApplicationCompleted && appState.isAuthorized;
     AppBloc.contactsCubit.fetchData();
-    super.initState();
+    _loadNotifToMe();
+  }
+
+  Future<void> _loadNotifToMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        notifToMe = prefs.getBool('pay_switch_value_notif_tome') ?? false;
+      });
+    }
   }
 
   Future<void> requestPermission() async {
@@ -216,7 +229,7 @@ class _CallsPageState extends State<CallsPage> {
                 noVerified = state.contactsUnverified;
               }
 
-              getContacts();
+              getContacts(); 
 
               return SizedBox(
                 height: double.maxFinite,
@@ -262,7 +275,10 @@ class _CallsPageState extends State<CallsPage> {
                               ),
                       ),
                       authorization
-                          ? ExtrenalCallsWidget(fromMe: fromMe)
+                          ? ExtrenalCallsWidget(
+                              fromMe: fromMe,
+                              onNotifToMeChanged: _loadNotifToMe,
+                            )
                           : IgnorePointer(
                               ignoring: true,
                               child: ExtrenalCallsWidget(fromMe: fromMe),
@@ -325,6 +341,14 @@ class _CallsPageState extends State<CallsPage> {
                           imagePath: active[index].user.personalInfo.avatar,
                           userName: active[index].name,
                           phoneNumber: active[index].phone.toString(),
+                          showNotificationToggle: true,
+                          notifToMe: notifToMe,
+                          sendNotifications: active[index].sendNotifications,
+                          onNotificationToggle: (value) async {
+                            await Api.setContactSendNotifications(
+                                active[index].id, value);
+                            AppBloc.contactsCubit.fetchData();
+                          },
                           onTap: () {
                             Navigator.push(
                                 context,
@@ -356,6 +380,14 @@ class _CallsPageState extends State<CallsPage> {
                           imagePath: isAdmin[index].user.personalInfo.avatar,
                           userName: isAdmin[index].name,
                           phoneNumber: isAdmin[index].phone.toString(),
+                          showNotificationToggle: true,
+                          notifToMe: notifToMe,
+                          sendNotifications: isAdmin[index].sendNotifications,
+                          onNotificationToggle: (value) async {
+                            await Api.setContactSendNotifications(
+                                isAdmin[index].id, value);
+                            AppBloc.contactsCubit.fetchData();
+                          },
                           onTap: () {
                             Navigator.push(
                                 context,

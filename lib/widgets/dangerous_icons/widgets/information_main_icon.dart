@@ -94,7 +94,7 @@ class InfoMainIcon extends StatelessWidget {
         visibleMainInfo = true;
         visibleInfoAtDay = true;
         break;
-      case "Камнепад / Оползень":
+      case "Камнепад":
         visibleInfoAtDay = true;
         break;
       case "Наводнение":

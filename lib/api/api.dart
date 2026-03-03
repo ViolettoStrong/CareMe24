@@ -64,6 +64,7 @@ class Api {
   static const String contactVerify = '/api/contacts';
   static const String contactUpdate = '/api/contacts';
   static const String contactAdd = '/api/contacts/add';
+  static const String contactSendNotifications = '/api/contacts';
 
   // medcard
   static const String medcardAdd = '/api/cards/add';
@@ -542,6 +543,23 @@ class Api {
     }
   }
 
+  /// PATCH /api/contacts/{contact_id}/send_notifications
+  /// Включить или отключить отправку уведомлений контакту.
+  static Future<dynamic> setContactSendNotifications(
+      String contactId, bool sendNotifications) async {
+    try {
+      var result = await httpManager.patch(
+        '$contactSendNotifications/$contactId/send_notifications',
+        params: {'send_notifications': sendNotifications},
+      );
+      log('setContactSendNotifications: $result');
+      return result;
+    } catch (e) {
+      log('setContactSendNotifications error: $e');
+      rethrow;
+    }
+  }
+
   static Future<StatusModel> addContact(Map<String, dynamic> data) async {
     log('  addContact: $data');
     try {
@@ -995,7 +1013,9 @@ class Api {
           currentWindSpeed: 0,
           date: [],
           windDirectionList: [],
-          windSpeedList: []);
+          windSpeedList: [],
+          currentDewPoint: 0,
+          currentPrecipitation: 0);
     }
   }
 
@@ -1495,8 +1515,15 @@ class Api {
       var result = await httpManager.get('/api/requests/get_institutions',
           params: params);
       log('getInstitutions: $result');
-      for (var service in result) {
-        institutionList.add(InstitutionModel.fromJson(service));
+      List<dynamic> list = result is List
+          ? result
+          : (result is Map && (result['results'] != null || result['data'] != null || result['institutions'] != null))
+              ? (result['results'] ?? result['data'] ?? result['institutions'] ?? []) as List<dynamic>
+              : <dynamic>[];
+      for (var item in list) {
+        if (item is Map) {
+          institutionList.add(InstitutionModel.fromJson(Map<String, dynamic>.from(item)));
+        }
       }
       return institutionList;
     } catch (e) {

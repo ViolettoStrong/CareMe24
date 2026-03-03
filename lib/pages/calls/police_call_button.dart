@@ -1,3 +1,5 @@
+import 'dart:math' show cos, sqrt, asin, sin, pi;
+
 import 'package:careme24/api/api.dart';
 import 'package:careme24/blocs/app_bloc.dart';
 import 'package:careme24/blocs/dangerous/dangerous_cubit.dart';
@@ -96,11 +98,23 @@ class _PoliceCallPageState extends State<PoliceCallButton> {
     if (res != null) {
       var institution = InstitutionModel.fromJson(res['institution']);
       institution = await _applyFavouriteFromApi(institution);
+      String distStr = '--';
+      String durStr = '--';
+      final coords = institution.location.coordinates;
+      if (coords.length >= 2) {
+        final instLon = coords[0].toDouble();
+        final instLat = coords[1].toDouble();
+        final km = _haversineKm(userLat, userLon, instLat, instLon);
+        if (km != null) {
+          distStr = km.toStringAsFixed(1);
+          durStr = (km / 50 * 60).round().toString();
+        }
+      }
       if (mounted) {
         setState(() {
           institutionModel = institution;
-          distance = res['distance'].toString();
-          duration = res['duration'].toString();
+          distance = distStr;
+          duration = durStr;
         });
       }
       _loadFavours(institutionModel!.id);
@@ -125,7 +139,20 @@ class _PoliceCallPageState extends State<PoliceCallButton> {
 
   Future<void> _loadFavours(String institutionId) async {
     final list = await Api.getRequestFavours(institutionId);
-    if (mounted) setState(() => favours = list);
+    if (!mounted) return;
+    if (institutionModel?.id != institutionId) return;
+    setState(() => favours = list);
+  }
+
+  static double? _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    if (lat1.isNaN || lon1.isNaN || lat2.isNaN || lon2.isNaN) return null;
+    const r = 6371.0;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * asin(sqrt(a));
+    return r * c;
   }
 
   Future<void> _loadDefaultInstitution(String type) async {
@@ -137,13 +164,38 @@ class _PoliceCallPageState extends State<PoliceCallButton> {
           if (map == null) continue;
           final instType = map['type']?.toString() ?? '';
           if (instType == type) {
-            final institution = InstitutionModel.fromJson(map);
+            final favouriteFromApi = InstitutionModel.fromJson(map);
+            final favouriteId = favouriteFromApi.id;
+            List<InstitutionModel> fullList = [];
+            try {
+              fullList = await Api.getInstitutions({'institution_type': type});
+            } catch (_) {}
+            InstitutionModel? institution;
+            for (final e in fullList) {
+              if (e.id == favouriteId) {
+                institution = e.copyWith(favourite: true);
+                break;
+              }
+            }
+            final inst = institution ?? favouriteFromApi.copyWith(favourite: true);
+            String distStr = '--';
+            String durStr = '--';
+            final coords = inst.location.coordinates;
+            if (coords.length >= 2) {
+              final userLat = BlocProvider.of<DangerousCubit>(context).lat;
+              final userLon = BlocProvider.of<DangerousCubit>(context).lon;
+              final km = _haversineKm(userLat, userLon, coords[1].toDouble(), coords[0].toDouble());
+              if (km != null) {
+                distStr = km.toStringAsFixed(1);
+                durStr = (km / 50 * 60).round().toString();
+              }
+            }
             if (!mounted) return;
             setState(() {
               default_institution = true;
-              institutionModel = institution.copyWith(favourite: true);
-              distance = '--';
-              duration = '--';
+              institutionModel = inst.copyWith(favourite: true);
+              distance = distStr;
+              duration = durStr;
             });
             _loadFavours(institutionModel!.id);
             return;
@@ -455,21 +507,22 @@ class _PoliceCallPageState extends State<PoliceCallButton> {
                                 builder: (context) =>
                                     const SelectInstituts(type: 'pol')))
                         .then((result) async {
+                      if (result == null || !mounted) return;
                       var institution = result['institution'] as InstitutionModel?;
                       if (institution != null) {
                         institution =
                             await _applyFavouriteFromApi(institution);
                       }
                       if (!mounted) return;
+                      final newId = institution?.id;
                       setState(() {
                         institutionModel = institution;
                         distance = result['distance'] ?? '';
                         duration = result['duration'] ?? '';
                         _displayReason = '';
+                        favours = null;
                       });
-                      if (institutionModel != null) {
-                        _loadFavours(institutionModel!.id);
-                      }
+                      if (newId != null) _loadFavours(newId);
                     });
                   },
                   child: Container(
@@ -496,21 +549,22 @@ class _PoliceCallPageState extends State<PoliceCallButton> {
 builder: (context) =>
                                     const SelectInstituts(type: 'pol')))
                         .then((result) async {
+                      if (result == null || !mounted) return;
                       var institution =
                           result['institution'] as InstitutionModel?;
                       if (institution != null) {
                         institution = await _applyFavouriteFromApi(institution);
                       }
                       if (!mounted) return;
+                      final newId = institution?.id;
                       setState(() {
                         institutionModel = institution;
                         distance = result['distance'] ?? '';
                         duration = result['duration'] ?? '';
                         _displayReason = '';
+                        favours = null;
                       });
-                      if (institutionModel != null) {
-                        _loadFavours(institutionModel!.id);
-                      }
+                      if (newId != null) _loadFavours(newId);
                     });
                     },
                     child: Container(

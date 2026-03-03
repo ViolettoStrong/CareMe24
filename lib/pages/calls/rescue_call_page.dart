@@ -255,7 +255,7 @@ class _RescueCallPageState extends State<RescueCallPage> {
   }
 
   Widget _buildReasonList() {
-    final favoursList = _favoursFromApi ?? widget.favours;
+    final favoursList = widget.favours ?? _favoursFromApi;
     if (favoursList != null) {
       if (favoursList.isEmpty) {
         return Center(
@@ -301,10 +301,10 @@ class _RescueCallPageState extends State<RescueCallPage> {
                         builder: (context) => RescueCallButton(
                               text: reasonText[index],
                               selectedContact: widget.selectedContact,
-                              initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
-                              initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
-                              initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
-                              initialFavours: _favoursFromApi ?? widget.favours,
+                              initialInstitution: widget.selectedInstitution ?? _institutionFromApi,
+                              initialDistance: widget.institutionDistance ?? (_institutionFromApi != null ? '--' : null),
+                              initialDuration: widget.institutionDuration ?? (_institutionFromApi != null ? '--' : null),
+                              initialFavours: widget.favours ?? _favoursFromApi,
                             )));
           },
           text: reasonText[index],
@@ -344,10 +344,10 @@ class _RescueCallPageState extends State<RescueCallPage> {
                 builder: (context) => RescueCallButton(
                   text: name,
                   selectedContact: widget.selectedContact,
-                  initialInstitution: _institutionFromApi ?? widget.selectedInstitution,
-                  initialDistance: _institutionFromApi != null ? '--' : widget.institutionDistance,
-                  initialDuration: _institutionFromApi != null ? '--' : widget.institutionDuration,
-                  initialFavours: _favoursFromApi ?? widget.favours,
+                  initialInstitution: widget.selectedInstitution ?? _institutionFromApi,
+                  initialDistance: widget.institutionDistance ?? (_institutionFromApi != null ? '--' : null),
+                  initialDuration: widget.institutionDuration ?? (_institutionFromApi != null ? '--' : null),
+                  initialFavours: widget.favours ?? _favoursFromApi,
                 ),
               ),
             );
